@@ -1,21 +1,3 @@
-# shadcn/ui monorepo template
+# rigor
 
-This is a Next.js monorepo template with shadcn/ui.
-
-## Adding components
-
-To add components to your app, run the following command at the root of your `web` app:
-
-```bash
-pnpm dlx shadcn@latest add button -c apps/web
-```
-
-This will place the ui components in the `packages/ui/src/components` directory.
-
-## Using components
-
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
-```
+rigor is a helpful tool for optimizing your repos for AI development. at its core, rigor is a set of tools for analyzing your repo and providing suggestions for how to improve it using static analysis and llm judgement.
