@@ -21,7 +21,7 @@ export function ScanForm({ className }: { className?: string }) {
     }
     setError(null)
     startTransition(() => {
-      router.push(`/github/${parsed.owner}/${parsed.repo}`)
+      router.push(`/${parsed.owner}/${parsed.repo}`)
     })
   }
 
@@ -29,11 +29,11 @@ export function ScanForm({ className }: { className?: string }) {
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
       <div
         className={cn(
-          "focus-within:border-ring flex h-11 items-center border bg-card pl-3 transition-colors",
+          "focus-within:border-ring flex h-14 items-center border bg-card pl-4 transition-colors",
           error && "border-destructive"
         )}
       >
-        <span className="text-muted-foreground hidden text-xs select-none sm:inline">
+        <span className="text-muted-foreground hidden text-sm select-none sm:inline">
           github.com/
         </span>
         <input
@@ -47,7 +47,7 @@ export function ScanForm({ className }: { className?: string }) {
           autoCapitalize="off"
           autoComplete="off"
           aria-label="GitHub repository"
-          className="placeholder:text-muted-foreground/60 h-full min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"
+          className="placeholder:text-muted-foreground/60 h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none"
         />
         <Button type="submit" size="lg" disabled={pending} className="m-1 px-4">
           {pending ? "Scanning" : "Scan"}
@@ -59,7 +59,7 @@ export function ScanForm({ className }: { className?: string }) {
           error ? "text-destructive" : "text-muted-foreground"
         )}
       >
-        {error ?? "Public repositories only. Fast scan runs without a model call."}
+        {error ?? "Public repos only. No sign in, no model call, no waiting."}
       </p>
     </form>
   )

@@ -13,7 +13,7 @@ import { buildProfile } from "@/lib/profile"
 import { scoreRepo } from "@/lib/score"
 import { recommend } from "@/lib/recommendations"
 
-export async function generateMetadata(props: PageProps<"/github/[owner]/[repo]">) {
+export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
   const { overall } = scoreRepo(buildProfile(owner, repo))
   return {
@@ -22,10 +22,9 @@ export async function generateMetadata(props: PageProps<"/github/[owner]/[repo]"
   }
 }
 
-export default async function ReportPage(props: PageProps<"/github/[owner]/[repo]">) {
+export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
 
-  // ponytail: fake latency so the loading state is visible in the prototype.
   await new Promise((resolve) => setTimeout(resolve, 1100))
 
   const profile = buildProfile(owner, repo)

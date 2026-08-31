@@ -168,7 +168,6 @@ export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory 
   }
 }
 
-// ponytail: equal weights. Weighting is a product decision, not a code problem.
 export function scoreRepo(p: RepoProfile) {
   const categories = CATEGORIES.map((def) => scoreCategory(def, p))
   const overall = Math.round(

@@ -50,6 +50,23 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
     --font-mono: var(--font-mono);
+    --animate-ticker: ticker 80s linear infinite;
+}
+
+@keyframes ticker {
+    to {
+        transform: translateX(calc(-50% - 1rem));
+    }
+}
+
+::selection {
+    background: var(--foreground);
+    color: var(--background);
+}
+
+pre {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
 }
 
 :root {
