@@ -1,8 +1,11 @@
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
+import { CopyButton } from "@/components/copy-button"
 import { CATEGORIES, type CategoryKey } from "@/lib/score"
 import { EXAMPLES } from "@/lib/examples"
+
+const INSTALL_COMMAND = "npx skills add jtljrdn/goodrepo"
 
 const SIGNAL_COUNT = CATEGORIES.reduce((n, c) => n + c.signals.length, 0)
 
@@ -80,7 +83,7 @@ export default function Page() {
           <h1 className="max-w-3xl text-4xl leading-[1.1] font-medium tracking-tight text-balance sm:text-5xl">
             How easy is your codebase for AI agents to work in?
           </h1>
-          <p className="text-muted-foreground mt-5 max-w-xl font-sans text-sm leading-relaxed">
+          <p className="mt-5 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
             Paste a repository. GoodRepo reads its structure, instructions, and
             tooling, then scores agent readiness out of 100: {SIGNAL_COUNT}{" "}
             measurable signals, with the evidence behind every point.
@@ -88,31 +91,54 @@ export default function Page() {
           <div className="mt-8 max-w-2xl">
             <ScanForm />
           </div>
-          <div className="mt-6 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground/60 mr-1">or try</span>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="mr-1 text-muted-foreground/60">or try</span>
             {EXAMPLES.map((example) => (
               <Link
                 key={example.slug}
                 href={`/${example.slug}`}
-                className="border-border/60 text-muted-foreground hover:text-foreground hover:border-border border px-2 py-1 transition-colors"
+                className="border border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               >
                 {example.slug}
               </Link>
             ))}
           </div>
+
+          <div className="mt-12 max-w-2xl border border-border/60">
+            <div className="flex items-baseline justify-between gap-3 border-b border-border/60 px-4 py-2.5">
+              <h2 className="text-xs font-medium">
+                Scan from inside your agent
+              </h2>
+            </div>
+            <div className="flex items-center gap-3 bg-muted/30 px-4 py-3">
+              <span
+                aria-hidden
+                className="text-xs text-muted-foreground/50 select-none"
+              >
+                $
+              </span>
+              <code className="min-w-0 flex-1 text-xs leading-relaxed">
+                {INSTALL_COMMAND}
+              </code>
+              <CopyButton
+                value={INSTALL_COMMAND}
+                label="Copy install command"
+              />
+            </div>
+          </div>
         </section>
 
         <section
           aria-hidden
-          className="border-border/60 overflow-hidden border-t py-3 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
+          className="overflow-hidden border-t border-border/60 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] py-3"
         >
-          <div className="animate-ticker flex w-max gap-8 whitespace-nowrap motion-reduce:animate-none">
+          <div className="flex w-max animate-ticker gap-8 whitespace-nowrap motion-reduce:animate-none">
             {[0, 1].map((half) => (
               <div key={half} className="flex gap-8">
                 {TICKER.map((signal) => (
                   <span
                     key={signal.text}
-                    className="text-muted-foreground/70 flex items-baseline gap-2 text-[11px]"
+                    className="flex items-baseline gap-2 text-[11px] text-muted-foreground/70"
                   >
                     <span className="text-success tabular-nums">
                       {signal.points}
@@ -125,19 +151,19 @@ export default function Page() {
           </div>
         </section>
 
-        <section className="border-border/60 border-t py-12">
+        <section className="border-t border-border/60 py-12">
           <h2 className="text-sm font-medium">What gets scored</h2>
           <ul className="mt-6 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORIES.map((category) => (
               <li
                 key={category.key}
-                className="border-border/60 hover:border-border border p-5 transition-colors"
+                className="border border-border/60 p-5 transition-colors hover:border-border"
               >
                 <h3 className="text-xs font-medium">{category.name}</h3>
-                <p className="text-muted-foreground mt-2 font-sans text-sm leading-relaxed">
+                <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
                   {category.question}
                 </p>
-                <div className="border-border/40 text-muted-foreground/60 mt-4 flex items-baseline justify-between gap-3 border-t pt-3 text-[10px]">
+                <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground/60">
                   <span className="truncate">
                     &ldquo;{CATEGORY_SAMPLES[category.key]}&rdquo;
                   </span>
@@ -150,50 +176,50 @@ export default function Page() {
           </ul>
         </section>
 
-        <section className="border-border/60 grid border-t py-12 sm:grid-cols-[1fr_1.1fr] sm:gap-10">
+        <section className="grid border-t border-border/60 py-12 sm:grid-cols-[1fr_1.1fr] sm:gap-10">
           <div>
             <h2 className="text-sm font-medium">What a model actually sees</h2>
-            <p className="text-muted-foreground mt-3 max-w-md font-sans text-sm leading-relaxed">
+            <p className="mt-3 max-w-md font-sans text-sm leading-relaxed text-muted-foreground">
               A fast scan compresses the whole repository into a profile like
               this one. If a deep scan runs, this profile, not your source tree,
               is the main input to every model call.
             </p>
-            <p className="text-muted-foreground/60 mt-3 font-sans text-xs">
+            <p className="mt-3 font-sans text-xs text-muted-foreground/60">
               Illustrative example, shortened.
             </p>
           </div>
-          <pre className="border-border/60 bg-muted/40 mt-6 overflow-x-auto border p-4 text-xs leading-relaxed sm:mt-0">
+          <pre className="mt-6 overflow-x-auto border border-border/60 bg-muted/40 p-4 text-xs leading-relaxed sm:mt-0">
             {PROFILE_EXAMPLE}
           </pre>
         </section>
 
-        <section className="border-border/60 border-t py-12">
+        <section className="border-t border-border/60 py-12">
           <h2 className="text-sm font-medium">
             Parse everything, sample selectively
           </h2>
-          <p className="text-muted-foreground mt-3 max-w-2xl font-sans text-sm leading-relaxed">
+          <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
             The score comes from measurable signals, not from asking a model for
             a number. Models are used where judgement actually helps: comparing
             sampled files, spotting patterns, and writing the recommendations.
           </p>
           <ul className="mt-6 grid gap-px sm:grid-cols-3">
             {LEVELS.map((level) => (
-              <li key={level.name} className="border-border/60 border p-5">
+              <li key={level.name} className="border border-border/60 p-5">
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="text-xs font-medium">{level.name}</h3>
-                  <span className="text-muted-foreground/60 text-[10px] tabular-nums">
+                  <span className="text-[10px] text-muted-foreground/60 tabular-nums">
                     {level.cost}
                   </span>
                 </div>
-                <p className="text-muted-foreground mt-2 font-sans text-sm leading-relaxed">
+                <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
                   {level.body}
                 </p>
-                <p className="text-muted-foreground/60 mt-4 flex items-center gap-1.5 text-[10px]">
+                <p className="mt-4 flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
                   <span
                     className={
                       level.available
-                        ? "bg-success size-1.5"
-                        : "border-border size-1.5 border"
+                        ? "size-1.5 bg-success"
+                        : "size-1.5 border border-border"
                     }
                   />
                   {level.available ? "Available now" : "Planned"}

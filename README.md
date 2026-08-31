@@ -7,11 +7,11 @@ GoodRepo is a helpful tool for optimizing your repos for AI development. at its 
 Install the agent-agnostic GoodRepo scan-and-fix workflow with the open Agent Skills CLI:
 
 ```sh
-npx skills add jtljrdn/rigor --skill goodrepo-scan
+npx skills add jtljrdn/goodrepo
 ```
 
 The CLI detects supported coding agents and lets you choose where to install the skill. To inspect the available skills without installing anything, run:
 
 ```sh
-npx skills add jtljrdn/rigor --list
+npx skills add jtljrdn/goodrepo --list
 ```
