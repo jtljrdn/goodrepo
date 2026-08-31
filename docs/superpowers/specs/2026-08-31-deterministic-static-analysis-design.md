@@ -12,6 +12,9 @@ fast scan, zero model tokens, running on Vercel Functions.
 The scoring layer in `apps/web/lib/score.ts` already reads only from
 `RepoProfile`. The analyzer's entire job is to produce that object honestly.
 
+The signal set drops from 41 to 40 in the process, because two overlapping
+signals merge and two double-counted signals are each assigned a single home.
+
 ## What exists today
 
 - `apps/web/lib/profile.ts` — the `RepoProfile` type, 41 `SignalId` values, and
@@ -19,7 +22,9 @@ The scoring layer in `apps/web/lib/score.ts` already reads only from
   `owner/repo` string. No network call happens.
 - `apps/web/lib/score.ts` — six categories, 43 signal slots over 41 unique
   signals, binary earned/not-earned, category score is earned over total, overall
-  is the unweighted mean of the six.
+  is the unweighted mean of the six. Two signals appear in two categories each,
+  and two further signals measure the same property. This design corrects both,
+  leaving **40 signals, each in exactly one category**.
 - `apps/web/lib/recommendations.ts` — copy for 13 of the 41 signals.
 
 ## Decisions
@@ -43,7 +48,13 @@ Each of these was decided during design and is settled.
    measurement next to the cutoff, for example "median 305 lines, passes under
    300". This serves Product Principle 1: every point is traceable. A visible
    arguable cliff beats a hidden smooth curve.
-6. **Two signals are not measured in a fast scan.** `consistentRouteShape` and
+6. **Every signal belongs to exactly one category.** A signal that appears in
+   two categories contributes twice to the overall score, which is not
+   defensible on a public number. See "Category reassignment" below.
+7. **`namedBoundaries` and `featureFolders` merge into one signal.** They both
+   measure whether the codebase is organised by domain or by file type. One
+   property gets one signal.
+8. **Two signals are not measured in a fast scan.** `consistentRouteShape` and
    `consistentErrors` need to read inside function bodies. They return
    not-measured and are filled in by the deep scan.
 
@@ -130,7 +141,7 @@ need.
 
 ## Signal inventory
 
-All 41 signals, how each is measured, and the proposed threshold. `T` marks a
+All 40 signals, how each is measured, and the proposed threshold. `T` marks a
 tunable cutoff that lives in `thresholds.ts`.
 
 ### File and config checks — exact, no threshold
@@ -181,8 +192,18 @@ tunable cutoff that lives in `thresholds.ts`.
 | Signal | Measurement | Threshold |
 |---|---|---|
 | `predictableRoot` | share of code files under a single top level directory, or under declared workspace roots | `T` >= 80% |
-| `namedBoundaries` | share of code files inside catch-all folders (`utils`, `helpers`, `common`, `misc`, `shared`, `lib`) | `T` < 15% |
-| `featureFolders` | share of the primary source root's immediate child directories whose names are type names (`components`, `hooks`, `utils`, `types`, `services`, `models`, `controllers`) rather than domain names | `T` < 50% |
+| `featureFolders` | share of the primary source root's **immediate child directories** whose names are type or catch-all names (`components`, `hooks`, `utils`, `helpers`, `common`, `misc`, `shared`, `lib`, `types`, `services`, `models`, `controllers`) rather than domain names | `T` < 50% |
+
+`featureFolders` replaces the former `namedBoundaries` and `featureFolders`
+pair, which measured the same property in two different categories. The
+`SignalId` `namedBoundaries` is removed.
+
+The measurement deliberately looks only at the **immediate children** of the
+primary source root, not at every path segment. A React repository legitimately
+has a `components/` folder; that alone is not disorganisation. What the signal
+catches is a source root whose children are *only* type names, so
+`src/{auth,billing,dashboard,components,lib}` passes at 40% while
+`src/{components,hooks,utils,types,services}` fails at 100%.
 
 ### Import graph — needs the module graph, not a parse
 
@@ -198,6 +219,39 @@ tunable cutoff that lives in `thresholds.ts`.
 |---|---|---|
 | `consistentRouteShape` | requires reading handler signatures and bodies | deep scan |
 | `consistentErrors` | requires reading catch blocks and error construction | deep scan |
+
+## Category reassignment
+
+Three signals move so that every signal has exactly one home.
+
+| Signal | Was in | Now in | Reasoning |
+|---|---|---|---|
+| `shallowTree` | Discoverability + Context | **Discoverability** | Depth is about navigating to a file, not about how much you read once there. |
+| `colocatedTests` | Discoverability + Context | **Discoverability** | Both original framings were about *finding* the test. That is discovery. |
+| `featureFolders` (merged) | Context, and `namedBoundaries` in Discoverability | **Context Efficiency** | Organising by feature is what keeps one change inside one folder. It pairs with `lowFanout`. |
+
+The resulting categories:
+
+| Category | Signals | Count |
+|---|---|---|
+| Discoverability | `readme`, `readmeDepth`, `predictableRoot`, `shallowTree`, `colocatedTests`, `generatedExcluded` | 6 |
+| Instructions | unchanged | 9 |
+| Testability | unchanged | 7 |
+| Consistency | unchanged, 2 of 6 not measured in a fast scan | 6 |
+| Tooling | unchanged | 8 |
+| Context Efficiency | `smallFiles`, `noMegaFiles`, `featureFolders`, `lowFanout` | 4 |
+
+**Consequence worth stating.** Category score is earned points over total points,
+so the totals renormalise on their own and no point values need editing. But the
+overall score is the unweighted mean of six categories, so each category is worth
+one sixth regardless of how many signals it holds. Context Efficiency now spreads
+that sixth across 4 signals instead of 6, making each Context signal worth roughly
+4.2% of the overall score where it was 2.8%. Discoverability moves the other way,
+from 7 signals to 6.
+
+That is a real weighting shift. It follows from the one-signal-one-category rule
+rather than being a separate decision, and whether the six categories should be
+weighted equally at all is already an open product question in PRODUCT.md.
 
 ## Changes to existing code
 
@@ -245,6 +299,14 @@ truncated: null | { cap: "download" | "files" | "perFile"; detail: string }
 
 Null when the scan completed. Set when a cap tripped, so the report can say
 which cap was hit rather than presenting a partial scan as a whole one.
+
+### `SignalId` loses `namedBoundaries`
+
+The union drops from 41 to 40 members. `CATEGORIES` in `score.ts` is edited so
+`shallowTree` and `colocatedTests` each appear once, and the merged
+`featureFolders` signal carries copy covering both properties it now measures.
+`recommendations.ts` keys off `SignalId`, so its `namedBoundaries` entry is
+retargeted to `featureFolders`.
 
 ### `buildProfile()` is deleted
 
@@ -326,21 +388,20 @@ These are known problems in the existing scoring model that this work surfaces.
 They are product decisions, not analyzer decisions, and none of them block
 implementation.
 
-1. **Two signals are double-counted.** `shallowTree` and `colocatedTests` each
-   appear in both Discoverability and Context Efficiency, so each contributes
-   twice to the overall score. This may be deliberate weighting or an oversight.
-2. **`namedBoundaries` and `featureFolders` measure almost the same thing.** Both
-   ask whether folders are named by domain or by type, and they sit in different
-   categories. They will correlate strongly and may effectively double-count a
-   third time.
-3. **The `featureFolders` heuristic is the weakest of the 41.** A type-name list
+1. **Category weighting is now uneven per signal.** Context Efficiency holds 4
+   signals and Discoverability holds 6, but each category is still worth one
+   sixth of the overall score. Whether the six categories should be weighted
+   equally is already an open product question in PRODUCT.md; this design makes
+   it slightly sharper.
+2. **The `featureFolders` heuristic is the weakest of the 40.** A type-name list
    is a crude proxy. It is defensible only because the evidence is shown. If it
    proves noisy against real repositories, moving it to not-measured is the
    honest fallback.
-4. **Thresholds are first guesses.** Every `T` value in this document is
+3. **Thresholds are first guesses.** Every `T` value in this document is
    reasoned, not calibrated. Running the analyzer over 50 to 100 well-regarded
    repositories and moving each cutoff to where the real distribution sits is
    worthwhile follow-up work, and it is cheap once the analyzer exists.
-5. **`recommendations.ts` covers 13 of 41 signals.** The remaining 28 have no
-   recommendation copy. A score that cannot tell the user what to do next
-   violates Product Principle 4.
+4. **`recommendations.ts` covers 13 of 40 signals.** Accepted for now by
+   decision; the remaining 27 get copy in follow-up work. Until then a failed
+   signal shows its evidence but no suggested fix, a partial gap against Product
+   Principle 4.
