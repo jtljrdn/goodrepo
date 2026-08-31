@@ -1,6 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalDependencies": [
+    ".env",
+    ".env.local"
+  ],
   "tasks": {
     "build": {
       "dependsOn": [
@@ -34,6 +38,11 @@
     "typecheck": {
       "dependsOn": [
         "^typecheck"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^test"
       ]
     },
     "dev": {
