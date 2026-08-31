@@ -153,7 +153,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
     impact: "Medium",
     source: "static",
     evidence: (p) =>
-      `The median file is ${p.medianFileLoc} lines and the largest is ${p.largestFileLoc}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
+      `The median file is ${p.medianFileBytes} lines and the largest is ${p.largestFileBytes}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
     fix: "Split the worst offenders along the boundaries they already have inside them.",
     bullets: [],
   },

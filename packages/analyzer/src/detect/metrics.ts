@@ -27,13 +27,13 @@ function casingOf(path: string): Casing {
 }
 
 export function detectMetrics(facts: RawFacts) {
-  const lines = facts.codeFiles.map((f) => f.lines)
-  const medianFileLoc = Math.round(median(lines))
-  const largestFileLoc = Math.max(0, ...lines)
+  const sizes = facts.codeFiles.map((f) => f.bytes)
+  const medianFileBytes = Math.round(median(sizes))
+  const largestFileBytes = Math.max(0, ...sizes)
   const measurements: Partial<Record<SignalId, Measurement>> = {}
 
-  measurements.smallFiles = measure("medianFileLoc", medianFileLoc)
-  measurements.noMegaFiles = measure("largestFileLoc", largestFileLoc)
+  measurements.smallFiles = measure("medianFileBytes", medianFileBytes)
+  measurements.noMegaFiles = measure("largestFileBytes", largestFileBytes)
 
   const counts = new Map<Casing, number>()
   for (const file of facts.codeFiles) {
@@ -47,13 +47,13 @@ export function detectMetrics(facts: RawFacts) {
   const hasFiles = facts.codeFiles.length > 0
 
   return {
-    medianFileLoc,
-    largestFileLoc,
-    linesOfCode: lines.reduce((total, n) => total + n, 0),
+    medianFileBytes,
+    largestFileBytes,
+    totalBytes: sizes.reduce((total, n) => total + n, 0),
     measurements,
     has: {
-      smallFiles: hasFiles ? passes("medianFileLoc", medianFileLoc) : null,
-      noMegaFiles: hasFiles ? passes("largestFileLoc", largestFileLoc) : null,
+      smallFiles: hasFiles ? passes("medianFileBytes", medianFileBytes) : null,
+      noMegaFiles: hasFiles ? passes("largestFileBytes", largestFileBytes) : null,
       consistentNaming: hasFiles ? passes("namingConsistency", namingShare) : null,
     },
   }

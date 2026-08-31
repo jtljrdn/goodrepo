@@ -3,7 +3,7 @@ import { detectTooling } from "./tooling"
 import type { RawFacts } from "../types"
 
 function facts(paths: string[]): RawFacts {
-  return { paths, codeFiles: [], keptText: new Map(), filesRead: 0, truncated: null }
+  return { paths, codeFiles: [], keptText: new Map(), sample: null, truncated: null }
 }
 
 test("detects lint config in any supported form", () => {

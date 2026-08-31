@@ -5,8 +5,8 @@ import type { CodeFileFacts, RawFacts } from "../types"
 function facts(paths: string[]): RawFacts {
   const codeFiles: CodeFileFacts[] = paths
     .filter((p) => /\.[cm]?[jt]sx?$/.test(p))
-    .map((path) => ({ path, lines: 10, imports: [] }))
-  return { paths, codeFiles, keptText: new Map(), filesRead: 0, truncated: null }
+    .map((path) => ({ path, bytes: 100, imports: [] }))
+  return { paths, codeFiles, keptText: new Map(), sample: null, truncated: null }
 }
 
 test("passes predictableRoot when most code sits under one top-level folder", () => {

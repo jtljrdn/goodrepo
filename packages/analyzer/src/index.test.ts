@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { analyze } from "./index"
-import type { FileEntry, RepoMeta, SignalId } from "./types"
+import type { RepoMeta, SignalId, TreeEntry } from "./types"
 
 const meta: RepoMeta = {
   owner: "acme",
@@ -12,15 +12,29 @@ const meta: RepoMeta = {
   commitMessage: "",
 }
 
-async function* feed(entries: FileEntry[]) {
-  for (const entry of entries) yield entry
+type Fixture = { path: string; text?: string; bytes?: number }
+
+function build(files: Fixture[]) {
+  const entries: TreeEntry[] = files.map((f) => ({
+    path: f.path,
+    bytes: f.bytes ?? f.text?.length ?? 0,
+  }))
+  const texts = new Map<string, string>()
+  const sampled = new Set<string>()
+  for (const f of files) {
+    if (f.text === undefined) continue
+    texts.set(f.path, f.text)
+    sampled.add(f.path)
+  }
+  return { entries, texts, sampled }
 }
 
-const file = (path: string, text: string | null = ""): FileEntry => ({
-  path,
-  size: text?.length ?? 0,
-  text,
-})
+function run(files: Fixture[], truncated: Parameters<typeof analyze>[4] = null) {
+  const { entries, texts, sampled } = build(files)
+  return analyze(entries, texts, sampled, meta, truncated)
+}
+
+const file = (path: string, text = ""): Fixture => ({ path, text })
 
 const ALL_SIGNALS: SignalId[] = [
   "readme", "readmeDepth", "predictableRoot", "shallowTree", "colocatedTests", "generatedExcluded",
@@ -38,23 +52,22 @@ test("the signal set is exactly 40", () => {
   expect(new Set(ALL_SIGNALS).size).toBe(40)
 })
 
-test("every signal is present in the profile", async () => {
-  const profile = await analyze(feed([file("package.json", "{}")]), meta)
+test("every signal is present in the profile", () => {
+  const profile = run([file("package.json", "{}")])
   for (const id of ALL_SIGNALS) {
     expect(Object.hasOwn(profile.has, id), id).toBe(true)
   }
   expect(Object.keys(profile.has)).toHaveLength(40)
 })
 
-test("the two deep-scan signals are null, never false", async () => {
-  const profile = await analyze(feed([file("package.json", "{}")]), meta)
+test("the two deep-scan signals are null, never false", () => {
+  const profile = run([file("package.json", "{}")])
   expect(profile.has.consistentRouteShape).toBeNull()
   expect(profile.has.consistentErrors).toBeNull()
 })
 
-test("a healthy repository earns the signals it should", async () => {
-  const profile = await analyze(
-    feed([
+test("a healthy repository earns the signals it should", () => {
+  const profile = run([
       file("package.json", JSON.stringify({
         packageManager: "bun@1.3.10",
         engines: { node: ">=20" },
@@ -68,10 +81,8 @@ test("a healthy repository earns the signals it should", async () => {
       file(".env.example", "DATABASE_URL="),
       file("src/auth/login.ts", "import { z } from 'zod'\nconst a = 1\n"),
       file("src/auth/login.test.ts", "import { test } from 'vitest'\n"),
-      file("src/billing/plan.ts", "import { z } from 'zod'\n"),
-    ]),
-    meta
-  )
+    file("src/billing/plan.ts", "import { z } from 'zod'\n"),
+  ])
   expect(profile.has.readme).toBe(true)
   expect(profile.has.readmeDepth).toBe(true)
   expect(profile.has.agentsMd).toBe(true)
@@ -84,21 +95,31 @@ test("a healthy repository earns the signals it should", async () => {
   expect(profile.testFramework).toBe("vitest")
 })
 
-test("an empty repository produces zeroes and no thrown error", async () => {
-  const profile = await analyze(feed([]), meta)
+test("an empty repository produces zeroes and no thrown error", () => {
+  const profile = run([])
   expect(profile.files).toBe(0)
-  expect(profile.medianFileLoc).toBe(0)
+  expect(profile.medianFileBytes).toBe(0)
   expect(profile.has.readme).toBe(false)
 })
 
-test("truncation is carried onto the profile", async () => {
-  const truncated = { cap: "files" as const, detail: "stopped early" }
-  const profile = await analyze(feed([file("package.json", "{}")]), meta, truncated)
+test("truncation is carried onto the profile", () => {
+  const truncated = { cap: "tree" as const, detail: "tree truncated" }
+  const profile = run([file("package.json", "{}")], truncated)
   expect(profile.truncated).toEqual(truncated)
 })
 
-test("measurements accompany every thresholded signal", async () => {
-  const profile = await analyze(feed([file("package.json", "{}"), file("src/a.ts", "const a = 1")]), meta)
+test("the sample size is reported so the report can disclose it", () => {
+  const { entries, texts } = build([
+    file("package.json", "{}"),
+    { path: "src/a.ts", text: "import { z } from 'zod'" },
+    { path: "src/b.ts", bytes: 300 },
+  ])
+  const profile = analyze(entries, texts, new Set(["src/a.ts"]), meta)
+  expect(profile.sample).toEqual({ sampled: 1, total: 2 })
+})
+
+test("measurements accompany every thresholded signal", () => {
+  const profile = run([file("package.json", "{}"), file("src/a.ts", "const a = 1")])
   for (const id of ["smallFiles", "noMegaFiles", "shallowTree", "consistentNaming"] as SignalId[]) {
     expect(profile.measurements[id], id).toBeDefined()
   }

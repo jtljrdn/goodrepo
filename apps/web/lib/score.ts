@@ -22,6 +22,12 @@ export type CategoryDef = {
   signals: Signal[]
 }
 
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 const s = (
   id: SignalId,
   points: number,
@@ -126,8 +132,18 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Context Efficiency",
     question: "How much must an agent read to make one change?",
     signals: [
-      s("smallFiles", 20, (p) => `Median file is ${p.medianFileLoc} lines`, (p) => `Median file is ${p.medianFileLoc} lines — most edits pull in a lot of context`),
-      s("noMegaFiles", 15, (p) => `Largest file is ${p.largestFileLoc} lines`, (p) => `Largest file is ${p.largestFileLoc} lines`),
+      s(
+        "smallFiles",
+        20,
+        (p) => `Median file is ${formatBytes(p.medianFileBytes)}`,
+        (p) => `Median file is ${formatBytes(p.medianFileBytes)}, so most edits pull in a lot of context`
+      ),
+      s(
+        "noMegaFiles",
+        15,
+        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`,
+        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`
+      ),
       s(
         "featureFolders",
         25,

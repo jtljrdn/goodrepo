@@ -6,13 +6,21 @@ import { detectMetrics } from "./detect/metrics"
 import { detectStructure } from "./detect/structure"
 import { detectTests } from "./detect/tests"
 import { detectTooling } from "./detect/tooling"
-import type { FileSource, Measurement, RawFacts, RepoMeta, RepoProfile, SignalId } from "./types"
+import type { Measurement, RawFacts, RepoMeta, RepoProfile, SignalId, TreeEntry } from "./types"
 
 export * from "./types"
 export { CAPS, passes, THRESHOLDS } from "./thresholds"
-export { isCodeFile, isTestFile, shouldReadContents } from "./skip"
-export { classifyRepo, fetchRepoMeta, fetchRootEntries, tarballSource } from "./source/tarball"
-export type { ScanFailure } from "./source/tarball"
+export { isCodeFile, isKeptFile, isTestFile } from "./skip"
+export { chooseConfigFiles, chooseSample } from "./collect"
+export {
+  classifyRepo,
+  fetchBlobs,
+  fetchBlobsRest,
+  fetchRepoMeta,
+  fetchTree,
+  isFailure,
+} from "./source/github"
+export type { RepoTree, ScanFailure } from "./source/github"
 
 const FRAMEWORK_MARKERS: [string, RegExp][] = [
   ["nextjs", /^next$/],
@@ -44,12 +52,14 @@ function detectFramework(facts: RawFacts): string {
   return "unknown"
 }
 
-export async function analyze(
-  source: FileSource,
+export function analyze(
+  entries: TreeEntry[],
+  texts: Map<string, string>,
+  sampled: Set<string>,
   meta: RepoMeta,
   truncated: RepoProfile["truncated"] = null
-): Promise<RepoProfile> {
-  const facts = await collect(source)
+): RepoProfile {
+  const facts = collect(entries, texts, sampled, truncated)
 
   const manifest = detectManifest(facts)
   const tooling = detectTooling(facts)
@@ -85,9 +95,9 @@ export async function analyze(
     files: facts.paths.length,
     directories: structure.directories,
     maxDirectoryDepth: structure.maxDirectoryDepth,
-    linesOfCode: metrics.linesOfCode,
-    medianFileLoc: metrics.medianFileLoc,
-    largestFileLoc: metrics.largestFileLoc,
+    totalBytes: metrics.totalBytes,
+    medianFileBytes: metrics.medianFileBytes,
+    largestFileBytes: metrics.largestFileBytes,
     packageManager: manifest.packageManager,
     scripts: manifest.scripts,
     testFramework: tests.testFramework,
@@ -101,6 +111,7 @@ export async function analyze(
     },
     has,
     measurements,
-    truncated: truncated ?? facts.truncated,
+    sample: facts.sample,
+    truncated: facts.truncated,
   }
 }

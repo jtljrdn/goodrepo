@@ -14,13 +14,10 @@ export type SignalId =
 
 export type Measurement = { value: number; threshold: number; unit: string }
 
-export type FileEntry = {
+export type TreeEntry = {
   path: string
-  size: number
-  text: string | null
+  bytes: number
 }
-
-export type FileSource = AsyncIterable<FileEntry>
 
 export type RepoMeta = {
   owner: string
@@ -32,19 +29,22 @@ export type RepoMeta = {
   commitMessage: string
 }
 
-export type TruncationCap = "download" | "files" | "perFile"
+export type TruncationCap = "tree"
 
 export type CodeFileFacts = {
   path: string
-  lines: number
-  imports: string[]
+  bytes: number
+  /** null when the file was not part of the import sample. */
+  imports: string[] | null
 }
+
+export type SampleInfo = { sampled: number; total: number }
 
 export type RawFacts = {
   paths: string[]
   codeFiles: CodeFileFacts[]
   keptText: Map<string, string>
-  filesRead: number
+  sample: SampleInfo | null
   truncated: null | { cap: TruncationCap; detail: string }
 }
 
@@ -54,9 +54,9 @@ export type RepoProfile = RepoMeta & {
   files: number
   directories: number
   maxDirectoryDepth: number
-  linesOfCode: number
-  medianFileLoc: number
-  largestFileLoc: number
+  totalBytes: number
+  medianFileBytes: number
+  largestFileBytes: number
   packageManager: string | null
   scripts: Record<string, string>
   testFramework: string | null
@@ -66,5 +66,7 @@ export type RepoProfile = RepoMeta & {
   docs: { readmeWords: number; agentsMdWords: number; sections: string[] }
   has: Record<SignalId, boolean | null>
   measurements: Partial<Record<SignalId, Measurement>>
+  /** Set when the import signals came from a sample rather than every file. */
+  sample: SampleInfo | null
   truncated: null | { cap: TruncationCap; detail: string }
 }

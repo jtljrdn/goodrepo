@@ -9,27 +9,62 @@ import {
   ReportHeadline,
   Section,
 } from "@/components/report"
-import { buildProfile } from "@/lib/profile"
-import { scoreRepo } from "@/lib/score"
+import { failureMessage, runScan } from "@/lib/scan"
 import { recommend } from "@/lib/recommendations"
+
+// vercel/next.js is 50.7 MB and ~31,800 files; 300s is the Hobby maximum.
+export const maxDuration = 300
 
 export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
-  const { overall } = scoreRepo(buildProfile(owner, repo))
+  // The score is deliberately absent: producing it here would run a second full
+  // scan just to build a title, doubling the work and the rate-limit cost.
   return {
-    title: `${owner}/${repo} — Agent Readiness ${overall}/100 · GoodRepo`,
-    description: `GoodRepo scored ${owner}/${repo} at ${overall}/100 for AI agent readiness.`,
+    title: `${owner}/${repo} · GoodRepo`,
+    description: `GoodRepo scores ${owner}/${repo} for AI agent readiness from measurable repository signals.`,
   }
 }
 
 export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
+  const result = await runScan(owner, repo)
 
-  await new Promise((resolve) => setTimeout(resolve, 1100))
+  if (!result.ok) {
+    const { title, detail } = failureMessage(result.failure)
+    return (
+      <>
+        <SiteHeader>
+          <span className="hidden sm:inline">
+            {owner}/{repo}
+          </span>
+          <Link href="/">
+            <Button variant="outline" size="sm">
+              New scan
+            </Button>
+          </Link>
+        </SiteHeader>
+        <main className="mx-auto max-w-5xl px-6 pb-24">
+          <div className="border-border/60 mt-16 border p-8">
+            <h1 className="text-lg font-medium">{title}</h1>
+            <p className="text-muted-foreground mt-3 max-w-prose font-sans text-sm leading-relaxed">
+              {detail}
+            </p>
+          </div>
+        </main>
+      </>
+    )
+  }
 
-  const profile = buildProfile(owner, repo)
-  const { overall, categories } = scoreRepo(profile)
+  const { profile, overall, categories } = result
   const recommendations = recommend(profile, categories)
+  const measured = categories.reduce(
+    (n, c) => n + c.signals.filter((sig) => sig.status !== "not-measured").length,
+    0
+  )
+  const deferred = categories.reduce(
+    (n, c) => n + c.signals.filter((sig) => sig.status === "not-measured").length,
+    0
+  )
 
   return (
     <>
@@ -58,9 +93,16 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
             </span>
           </span>
           <span className="text-muted-foreground ml-auto">
-            {categories.reduce((n, c) => n + c.signals.length, 0)} signals checked
+            {measured} signals checked
+            {deferred > 0 ? ` · ${deferred} need a deep scan` : ""}
           </span>
         </div>
+
+        {profile.truncated ? (
+          <p className="border-warn/40 text-warn mt-4 border px-3 py-2 text-xs">
+            Partial scan. {profile.truncated.detail} The score reflects what was read.
+          </p>
+        ) : null}
 
         <Section
           title="Category scores"

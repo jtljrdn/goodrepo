@@ -10,12 +10,17 @@ test("passes respects each direction at the boundary", () => {
 
   expect(passes("typeNamedFolders", 0.49)).toBe(true)
   expect(passes("typeNamedFolders", 0.5)).toBe(false)
+
+  expect(passes("medianFileBytes", 10_000)).toBe(true)
+  expect(passes("medianFileBytes", 10_001)).toBe(false)
 })
 
-test("caps clear the largest example repository", () => {
-  // vercel/next.js measured 2026-08-31: 50.7MB compressed, ~20,900 code files
-  expect(CAPS.downloadBytes).toBeGreaterThan(50.7 * 1024 * 1024)
-  expect(CAPS.filesRead).toBeGreaterThan(20_900)
+test("caps bound what a single scan fetches", () => {
+  // The scan never downloads a repository. It reads the tree, then fetches a
+  // bounded sample, so cost is capped by these numbers rather than repo size.
+  expect(CAPS.importSample).toBeLessThanOrEqual(500)
+  expect(CAPS.configFiles).toBeLessThanOrEqual(100)
+  expect(CAPS.perFileBytes).toBeLessThanOrEqual(4 * 1024 * 1024)
 })
 
 test("every threshold declares a unit and a direction", () => {

@@ -39,9 +39,14 @@ function isUiFile(path: string): boolean {
 
 export function detectImports(facts: RawFacts) {
   const measurements: Partial<Record<SignalId, Measurement>> = {}
+  // Only sampled files have imports. Everything below measures the sample, and
+  // the report states the sample size next to the result.
+  const sampled = facts.codeFiles.filter(
+    (f): f is typeof f & { imports: string[] } => f.imports !== null
+  )
 
   const validationCounts = new Map<string, number>()
-  for (const file of facts.codeFiles) {
+  for (const file of sampled) {
     for (const specifier of file.imports) {
       const pkg = rootPackage(specifier)
       if (VALIDATION_LIBS.includes(pkg)) {
@@ -54,14 +59,14 @@ export function detectImports(facts: RawFacts) {
   const validationShare = validationTotal > 0 ? validationTop / validationTotal : 0
   measurements.singleValidationLib = measure("validationDominance", validationShare)
 
-  const uiFiles = facts.codeFiles.filter((f) => isUiFile(f.path))
+  const uiFiles = sampled.filter((f) => isUiFile(f.path))
   const uiWithDb = uiFiles.filter((f) =>
     f.imports.some((s) => DB_LIBS.includes(rootPackage(s)))
   ).length
   const dbShare = uiFiles.length > 0 ? uiWithDb / uiFiles.length : 0
   measurements.singleDataLayer = measure("directDbInUi", dbShare)
 
-  const fanouts = facts.codeFiles.map((file) => {
+  const fanouts = sampled.map((file) => {
     const dirs = new Set<string>()
     for (const specifier of file.imports) {
       dirs.add(specifier.startsWith(".") ? dirOf(specifier) : rootPackage(specifier))
@@ -81,7 +86,7 @@ export function detectImports(facts: RawFacts) {
       // which is null, never a failed point.
       singleValidationLib: validationTotal > 0 ? passes("validationDominance", validationShare) : null,
       singleDataLayer: uiFiles.length > 0 ? passes("directDbInUi", dbShare) : null,
-      lowFanout: facts.codeFiles.length > 0 ? passes("medianFanout", medianFanout) : null,
+      lowFanout: sampled.length > 0 ? passes("medianFanout", medianFanout) : null,
     },
   }
 }

@@ -3,29 +3,29 @@ import { detectMetrics } from "./metrics"
 import type { CodeFileFacts, RawFacts } from "../types"
 
 function facts(files: [string, number][]): RawFacts {
-  const codeFiles: CodeFileFacts[] = files.map(([path, lines]) => ({ path, lines, imports: [] }))
-  return { paths: files.map(([p]) => p), codeFiles, keptText: new Map(), filesRead: 0, truncated: null }
+  const codeFiles: CodeFileFacts[] = files.map(([path, bytes]) => ({ path, bytes, imports: [] }))
+  return { paths: files.map(([p]) => p), codeFiles, keptText: new Map(), sample: null, truncated: null }
 }
 
 test("computes the median of an odd and an even set", () => {
-  expect(detectMetrics(facts([["a.ts", 10], ["b.ts", 20], ["c.ts", 30]])).medianFileLoc).toBe(20)
-  expect(detectMetrics(facts([["a.ts", 10], ["b.ts", 20]])).medianFileLoc).toBe(15)
+  expect(detectMetrics(facts([["a.ts", 10], ["b.ts", 20], ["c.ts", 30]])).medianFileBytes).toBe(20)
+  expect(detectMetrics(facts([["a.ts", 10], ["b.ts", 20]])).medianFileBytes).toBe(15)
 })
 
-test("applies the median threshold at the boundary", () => {
-  expect(detectMetrics(facts([["a.ts", 300]])).has.smallFiles).toBe(true)
-  expect(detectMetrics(facts([["a.ts", 301]])).has.smallFiles).toBe(false)
+test("applies the median byte threshold at the boundary", () => {
+  expect(detectMetrics(facts([["a.ts", 10_000]])).has.smallFiles).toBe(true)
+  expect(detectMetrics(facts([["a.ts", 10_001]])).has.smallFiles).toBe(false)
 })
 
-test("applies the largest-file threshold at the boundary", () => {
-  expect(detectMetrics(facts([["a.ts", 1500]])).has.noMegaFiles).toBe(true)
-  expect(detectMetrics(facts([["a.ts", 1501]])).has.noMegaFiles).toBe(false)
+test("applies the largest-file byte threshold at the boundary", () => {
+  expect(detectMetrics(facts([["a.ts", 50_000]])).has.noMegaFiles).toBe(true)
+  expect(detectMetrics(facts([["a.ts", 50_001]])).has.noMegaFiles).toBe(false)
 })
 
-test("reports total lines and the largest file", () => {
+test("reports total bytes and the largest file", () => {
   const result = detectMetrics(facts([["a.ts", 10], ["b.ts", 40]]))
-  expect(result.linesOfCode).toBe(50)
-  expect(result.largestFileLoc).toBe(40)
+  expect(result.totalBytes).toBe(50)
+  expect(result.largestFileBytes).toBe(40)
 })
 
 test("passes consistentNaming when one casing dominates", () => {
@@ -43,7 +43,7 @@ test("fails consistentNaming when casing is mixed", () => {
 
 test("an empty repository does not divide by zero and is not scored", () => {
   const empty = detectMetrics(facts([]))
-  expect(empty.medianFileLoc).toBe(0)
+  expect(empty.medianFileBytes).toBe(0)
   expect(empty.has.smallFiles).toBeNull()
 })
 

@@ -3,8 +3,14 @@ import { detectImports } from "./imports"
 import type { CodeFileFacts, RawFacts } from "../types"
 
 function facts(files: [string, string[]][]): RawFacts {
-  const codeFiles: CodeFileFacts[] = files.map(([path, imports]) => ({ path, lines: 10, imports }))
-  return { paths: files.map(([p]) => p), codeFiles, keptText: new Map(), filesRead: 0, truncated: null }
+  const codeFiles: CodeFileFacts[] = files.map(([path, imports]) => ({ path, bytes: 100, imports }))
+  return {
+    paths: files.map(([p]) => p),
+    codeFiles,
+    keptText: new Map(),
+    sample: { sampled: files.length, total: files.length },
+    truncated: null,
+  }
 }
 
 test("passes when one validation library dominates", () => {

@@ -7,7 +7,7 @@ function facts(paths: string[], kept: Record<string, string> = {}): RawFacts {
     paths,
     codeFiles: [],
     keptText: new Map(Object.entries(kept)),
-    filesRead: 0,
+    sample: null,
     truncated: null,
   }
 }
