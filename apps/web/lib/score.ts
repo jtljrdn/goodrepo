@@ -1,8 +1,9 @@
-import type { RepoProfile, SignalId } from "@/lib/profile"
+import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 
 export type Signal = {
   id: SignalId
   points: number
+  subject: string
   label: (p: RepoProfile) => string
   missing: (p: RepoProfile) => string
 }
@@ -22,14 +23,22 @@ export type CategoryDef = {
   signals: Signal[]
 }
 
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
 const s = (
   id: SignalId,
   points: number,
+  subject: string,
   label: string | ((p: RepoProfile) => string),
   missing: string | ((p: RepoProfile) => string)
 ): Signal => ({
   id,
   points,
+  subject,
   label: typeof label === "function" ? label : () => label,
   missing: typeof missing === "function" ? missing : () => missing,
 })
@@ -40,23 +49,22 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Discoverability",
     question: "Can an agent quickly find the code that matters?",
     signals: [
-      s("readme", 15, "README.md at repository root", "No README at repository root"),
+      s("readme", 15, "README at the repository root", "README.md at repository root", "No README at repository root"),
       s(
         "readmeDepth",
-        10,
+        10, "README depth",
         (p) => `README covers the project in depth (${p.docs.readmeWords} words)`,
         (p) => `README is thin (${p.docs.readmeWords} words) — mostly a title and install line`
       ),
-      s("predictableRoot", 15, "Source lives under a single predictable root", "Source is split across several unrelated top-level folders"),
+      s("predictableRoot", 15, "Source under one predictable root", "Source lives under a single predictable root", "Source is split across several unrelated top-level folders"),
       s(
         "shallowTree",
-        15,
+        15, "Directory depth",
         (p) => `Directory tree stays shallow (max depth ${p.maxDirectoryDepth})`,
         (p) => `Directory tree is deep (max depth ${p.maxDirectoryDepth})`
       ),
-      s("namedBoundaries", 15, "Folders are named after domains, not types", "Large catch-all folders (utils, helpers, common) hold unrelated code"),
-      s("colocatedTests", 15, "Tests sit next to the code they cover", "Tests live far from the code they cover"),
-      s("generatedExcluded", 15, "Generated output is ignored and excluded", "Generated output is committed alongside source"),
+      s("colocatedTests", 15, "Tests beside the code they cover", "Tests sit next to the code they cover", "Tests live far from the code they cover"),
+      s("generatedExcluded", 15, "Generated output excluded", "Generated output is ignored and excluded", "Generated output is committed alongside source"),
     ],
   },
   {
@@ -64,15 +72,15 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Instructions",
     question: "Are agent-facing instructions present and complete?",
     signals: [
-      s("agentsMd", 20, (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`, "No AGENTS.md"),
-      s("claudeMd", 5, "CLAUDE.md present", "No CLAUDE.md"),
-      s("docPackageManager", 10, (p) => `Package manager documented (${p.packageManager ?? "unknown"})`, "Package manager not documented"),
-      s("docTestCommand", 10, "Test command documented", "Test command not documented"),
-      s("docBuildCommand", 10, "Build and dev commands documented", "Build and dev commands not documented"),
-      s("docArchitecture", 15, "Architecture section explains the main boundaries", "Architecture undocumented"),
-      s("docDatabase", 10, "Database and migration workflow documented", "Database migration workflow undocumented"),
-      s("docApiConventions", 10, "API conventions documented", "API conventions undocumented"),
-      s("docCodeStyle", 10, "Code style and naming conventions documented", "Code style and naming conventions undocumented"),
+      s("agentsMd", 20, "AGENTS.md", (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`, "No AGENTS.md"),
+      s("claudeMd", 5, "CLAUDE.md", "CLAUDE.md present", "No CLAUDE.md"),
+      s("docPackageManager", 10, "Package manager documented", (p) => `Package manager documented (${p.packageManager ?? "unknown"})`, "Package manager not documented"),
+      s("docTestCommand", 10, "Test command documented", "Test command documented", "Test command not documented"),
+      s("docBuildCommand", 10, "Build and dev commands documented", "Build and dev commands documented", "Build and dev commands not documented"),
+      s("docArchitecture", 15, "Architecture documented", "Architecture section explains the main boundaries", "Architecture undocumented"),
+      s("docDatabase", 10, "Database workflow documented", "Database and migration workflow documented", "Database migration workflow undocumented"),
+      s("docApiConventions", 10, "API conventions documented", "API conventions documented", "API conventions undocumented"),
+      s("docCodeStyle", 10, "Code style documented", "Code style and naming conventions documented", "Code style and naming conventions undocumented"),
     ],
   },
   {
@@ -80,13 +88,13 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Testability",
     question: "Can an agent verify its own changes?",
     signals: [
-      s("testScript", 20, (p) => `test script defined (${p.scripts.test ?? ""})`, "No test script in package.json"),
-      s("testConfig", 15, (p) => `Test framework config detected (${p.testFramework})`, "No test framework config detected"),
-      s("testsExist", 20, (p) => `${p.testFiles} test files present`, "No test files found"),
-      s("typecheckScript", 15, "typecheck script defined", "No typecheck script — agents cannot check types in one command"),
-      s("singleTestDocumented", 10, "Running a single test is documented", "No documented way to run one test"),
-      s("ciRunsTests", 10, "CI runs the test suite", "CI does not run the test suite"),
-      s("coverage", 10, "Coverage reporting configured", "No coverage reporting"),
+      s("testScript", 20, "test script", (p) => `test script defined (${p.scripts.test ?? ""})`, "No test script in package.json"),
+      s("testConfig", 15, "Test framework config", (p) => `Test framework config detected (${p.testFramework})`, "No test framework config detected"),
+      s("testsExist", 20, "Test files", (p) => `${p.testFiles} test files present`, "No test files found"),
+      s("typecheckScript", 15, "typecheck script", "typecheck script defined", "No typecheck script — agents cannot check types in one command"),
+      s("singleTestDocumented", 10, "Running a single test documented", "Running a single test is documented", "No documented way to run one test"),
+      s("ciRunsTests", 10, "CI runs the tests", "CI runs the test suite", "CI does not run the test suite"),
+      s("coverage", 10, "Coverage reporting", "Coverage reporting configured", "No coverage reporting"),
     ],
   },
   {
@@ -96,15 +104,15 @@ export const CATEGORIES: CategoryDef[] = [
     signals: [
       s(
         "singleValidationLib",
-        20,
+        20, "One validation approach",
         (p) => `One validation approach across routes (${p.validationPatterns[0]})`,
         (p) => `Mixed validation approaches (${[...new Set(p.validationPatterns)].join(", ")})`
       ),
-      s("consistentRouteShape", 20, (p) => `${p.apiRoutes} routes share one handler shape`, (p) => `Route handlers across ${p.apiRoutes} routes use several shapes`),
-      s("consistentNaming", 15, "File and export naming is uniform", "File naming mixes conventions"),
-      s("singleDataLayer", 15, "Data access goes through one layer", "Data access is spread across components and routes"),
-      s("consistentErrors", 15, "Error handling follows one pattern", "Error handling differs between modules"),
-      s("lintConfig", 15, "Lint config enforces the conventions", "No lint config enforcing conventions"),
+      s("consistentRouteShape", 20, "Route handlers share one shape", (p) => `${p.apiRoutes} routes share one handler shape`, (p) => `Route handlers across ${p.apiRoutes} routes use several shapes`),
+      s("consistentNaming", 15, "Uniform file naming", "File and export naming is uniform", "File naming mixes conventions"),
+      s("singleDataLayer", 15, "Data access through one layer", "Data access goes through one layer", "Data access is spread across components and routes"),
+      s("consistentErrors", 15, "Error handling follows one pattern", "Error handling follows one pattern", "Error handling differs between modules"),
+      s("lintConfig", 15, "Lint config enforcing conventions", "Lint config enforces the conventions", "No lint config enforcing conventions"),
     ],
   },
   {
@@ -112,14 +120,14 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Tooling",
     question: "Is setup, build, lint and test behaviour obvious?",
     signals: [
-      s("lockfile", 15, (p) => `Lockfile and pinned package manager (${p.packageManager})`, "No lockfile or pinned package manager"),
-      s("buildScript", 15, "build script defined", "No build script"),
-      s("lintScript", 15, "lint script defined", "No lint script"),
-      s("formatScript", 10, "format script defined", "No format script"),
-      s("envExample", 15, ".env.example lists required variables", "No .env.example — required env vars are unknown"),
-      s("container", 10, "Dockerfile or devcontainer present", "No Dockerfile or devcontainer"),
-      s("ciWorkflow", 10, "CI workflow defined", "No CI workflow"),
-      s("nodePinned", 10, "Runtime version pinned", "Runtime version not pinned"),
+      s("lockfile", 15, "Lockfile and pinned package manager", (p) => `Lockfile and pinned package manager (${p.packageManager})`, "No lockfile or pinned package manager"),
+      s("buildScript", 15, "build script", "build script defined", "No build script"),
+      s("lintScript", 15, "lint script", "lint script defined", "No lint script"),
+      s("formatScript", 10, "format script", "format script defined", "No format script"),
+      s("envExample", 15, "Environment variable template", ".env.example lists required variables", "No .env.example — required env vars are unknown"),
+      s("container", 10, "Dockerfile or devcontainer", "Dockerfile or devcontainer present", "No Dockerfile or devcontainer"),
+      s("ciWorkflow", 10, "CI workflow", "CI workflow defined", "No CI workflow"),
+      s("nodePinned", 10, "Runtime version pinned", "Runtime version pinned", "Runtime version not pinned"),
     ],
   },
   {
@@ -127,41 +135,83 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Context Efficiency",
     question: "How much must an agent read to make one change?",
     signals: [
-      s("smallFiles", 20, (p) => `Median file is ${p.medianFileLoc} lines`, (p) => `Median file is ${p.medianFileLoc} lines — most edits pull in a lot of context`),
-      s("noMegaFiles", 15, (p) => `Largest file is ${p.largestFileLoc} lines`, (p) => `Largest file is ${p.largestFileLoc} lines`),
-      s("shallowTree", 15, "Paths are short enough to guess", "Deep paths make files hard to guess"),
-      s("featureFolders", 15, "Related code is grouped by feature", "Related code is scattered across layers"),
-      s("lowFanout", 20, "Common changes stay inside one module", "Common changes touch many modules at once"),
-      s("colocatedTests", 15, "Test for a file is one directory away", "Finding the test for a file requires a search"),
+      s(
+        "smallFiles",
+        20, "Median file size",
+        (p) => `Median file is ${formatBytes(p.medianFileBytes)}`,
+        (p) => `Median file is ${formatBytes(p.medianFileBytes)}, so most edits pull in a lot of context`
+      ),
+      s(
+        "noMegaFiles",
+        15, "Largest file size",
+        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`,
+        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`
+      ),
+      s(
+        "featureFolders",
+        25, "Folders named by feature",
+        "Source folders are named after features, not file types",
+        "Source folders are named after file types (components, hooks, utils), so one change is spread across them"
+      ),
+      s("lowFanout", 20, "Change fan-out across modules", "Common changes stay inside one module", "Common changes touch many modules at once"),
     ],
   },
 ]
 
-export type ScoredSignal = { id: SignalId; points: number; earned: boolean; text: string }
+export type SignalStatus = "pass" | "fail" | "not-measured"
+
+const DEEP_SCAN_ONLY = new Set<SignalId>(["consistentRouteShape", "consistentErrors"])
+
+export type ScoredSignal = {
+  id: SignalId
+  points: number
+  status: SignalStatus
+  text: string
+  measurement?: Measurement
+}
+
 export type ScoredCategory = {
   key: CategoryKey
   name: string
   question: string
-  score: number
+  score: number | null
   earnedPoints: number
   totalPoints: number
   signals: ScoredSignal[]
 }
 
 export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory {
-  const signals = def.signals.map((sig) => ({
-    id: sig.id,
-    points: sig.points,
-    earned: p.has[sig.id],
-    text: p.has[sig.id] ? sig.label(p) : sig.missing(p),
-  }))
-  const totalPoints = signals.reduce((n, sig) => n + sig.points, 0)
-  const earnedPoints = signals.reduce((n, sig) => n + (sig.earned ? sig.points : 0), 0)
+  const signals: ScoredSignal[] = def.signals.map((sig) => {
+    const value = p.has[sig.id]
+    if (value === null || value === undefined) {
+      const reason = DEEP_SCAN_ONLY.has(sig.id)
+        ? "needs a deep scan"
+        : "does not apply to this repository"
+      return {
+        id: sig.id,
+        points: sig.points,
+        status: "not-measured",
+        text: `${sig.subject} · ${reason}`,
+      }
+    }
+    return {
+      id: sig.id,
+      points: sig.points,
+      status: value ? "pass" : "fail",
+      text: value ? sig.label(p) : sig.missing(p),
+      measurement: p.measurements[sig.id],
+    }
+  })
+
+  const measured = signals.filter((sig) => sig.status !== "not-measured")
+  const totalPoints = measured.reduce((n, sig) => n + sig.points, 0)
+  const earnedPoints = measured.reduce((n, sig) => n + (sig.status === "pass" ? sig.points : 0), 0)
+
   return {
     key: def.key,
     name: def.name,
     question: def.question,
-    score: Math.round((earnedPoints / totalPoints) * 100),
+    score: totalPoints === 0 ? null : Math.round((earnedPoints / totalPoints) * 100),
     earnedPoints,
     totalPoints,
     signals,
@@ -170,9 +220,11 @@ export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory 
 
 export function scoreRepo(p: RepoProfile) {
   const categories = CATEGORIES.map((def) => scoreCategory(def, p))
-  const overall = Math.round(
-    categories.reduce((n, c) => n + c.score, 0) / categories.length
+  const scored = categories.filter(
+    (c): c is ScoredCategory & { score: number } => c.score !== null
   )
+  const overall =
+    scored.length === 0 ? null : Math.round(scored.reduce((n, c) => n + c.score, 0) / scored.length)
   return { overall, categories }
 }
 

@@ -153,7 +153,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
     impact: "Medium",
     source: "static",
     evidence: (p) =>
-      `The median file is ${p.medianFileLoc} lines and the largest is ${p.largestFileLoc}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
+      `The median file is ${p.medianFileBytes} lines and the largest is ${p.largestFileBytes}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
     fix: "Split the worst offenders along the boundaries they already have inside them.",
     bullets: [],
   },
@@ -201,7 +201,7 @@ export function recommend(p: RepoProfile, categories: ScoredCategory[]): Recomme
 
   for (const category of categories) {
     for (const signal of category.signals) {
-      if (signal.earned || seen.has(signal.id)) continue
+      if (signal.status !== "fail" || seen.has(signal.id)) continue
       const copy = COPY[signal.id]
       if (!copy) continue
       seen.add(signal.id)

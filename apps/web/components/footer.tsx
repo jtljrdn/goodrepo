@@ -1,12 +1,11 @@
+import { cacheLife } from "next/cache"
 import Link from "next/link"
 
 const REPO = "jtljrdn/goodrepo"
 
 async function starCount(): Promise<number | null> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}`, {
-      next: { revalidate: 3600 },
-    })
+    const res = await fetch(`https://api.github.com/repos/${REPO}`)
     if (!res.ok) return null
     const data = (await res.json()) as { stargazers_count?: number }
     return data.stargazers_count ?? null
@@ -16,6 +15,9 @@ async function starCount(): Promise<number | null> {
 }
 
 export async function Footer() {
+  "use cache"
+  cacheLife("hours")
+
   const stars = await starCount()
 
   return (

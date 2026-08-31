@@ -1,6 +1,6 @@
-import type { RepoProfile } from "@/lib/profile"
+import type { Measurement, RepoProfile } from "@/lib/profile"
 import type { ScoredCategory } from "@/lib/score"
-import { band } from "@/lib/score"
+import { band, formatBytes } from "@/lib/score"
 import type { Recommendation } from "@/lib/recommendations"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -48,9 +48,34 @@ export function Section({
   )
 }
 
-export function ScoreDial({ score }: { score: number }) {
+function percent(value: number): string {
+  return `${Number((value * 100).toFixed(1))}%`
+}
+
+function formatMeasurement({ value, threshold, unit }: Measurement): string {
+  if (unit === "share") return `${percent(value)} · passes at ${percent(threshold)}`
+  return `${value.toLocaleString()} ${unit} · threshold ${threshold.toLocaleString()}`
+}
+
+const SIGNAL_MARK = { pass: "✓", fail: "⚠", "not-measured": "–" } as const
+const SIGNAL_TONE = {
+  pass: "text-success",
+  fail: "text-warn",
+  "not-measured": "text-muted-foreground/60",
+} as const
+
+export function ScoreDial({ score }: { score: number | null }) {
   const radius = 44
   const circumference = 2 * Math.PI * radius
+
+  if (score === null) {
+    return (
+      <div className="border-border/60 flex size-32 shrink-0 items-center justify-center border">
+        <span className="text-muted-foreground text-xs">not scored</span>
+      </div>
+    )
+  }
+
   const tone = band(score)
 
   return (
@@ -87,16 +112,16 @@ export function ReportHeadline({
   overall,
 }: {
   profile: RepoProfile
-  overall: number
+  overall: number | null
 }) {
-  const tone = band(overall)
+  const tone = overall === null ? null : band(overall)
   const meta = [
-    profile.framework,
+    profile.framework === "unknown" ? null : profile.framework,
     profile.language,
     `${profile.files.toLocaleString()} files`,
-    `${Math.round(profile.linesOfCode / 1000)}k lines`,
+    formatBytes(profile.totalBytes),
     profile.packageManager ?? "no package manager",
-  ]
+  ].filter((item): item is string => item !== null)
 
   return (
     <div className="flex flex-col gap-8 py-10 sm:flex-row sm:items-center">
@@ -105,7 +130,9 @@ export function ReportHeadline({
           {profile.owner}/<span className="text-foreground">{profile.repo}</span>
         </p>
         <h1 className="mt-3 text-2xl font-medium tracking-tight">Agent Readiness</h1>
-        <p className={cn("mt-1 text-sm", BAND_TEXT[tone])}>{BAND_LABEL[tone]}</p>
+        <p className={cn("mt-1 text-sm", tone ? BAND_TEXT[tone] : "text-muted-foreground")}>
+          {tone ? BAND_LABEL[tone] : "No categories could be scored"}
+        </p>
         <ul className="text-muted-foreground mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
           {meta.map((item) => (
             <li key={item}>{item}</li>
@@ -128,18 +155,20 @@ export function CategorySummary({ categories }: { categories: ScoredCategory[] }
           >
             <span className="w-40 shrink-0 text-xs">{category.name}</span>
             <span className="bg-border/60 relative h-1 flex-1">
-              <span
-                className={cn("absolute inset-y-0 left-0", BAND_BG[band(category.score)])}
-                style={{ width: `${category.score}%` }}
-              />
+              {category.score === null ? null : (
+                <span
+                  className={cn("absolute inset-y-0 left-0", BAND_BG[band(category.score)])}
+                  style={{ width: `${category.score}%` }}
+                />
+              )}
             </span>
             <span
               className={cn(
                 "w-8 shrink-0 text-right text-xs tabular-nums",
-                BAND_TEXT[band(category.score)]
+                category.score === null ? "text-muted-foreground/60" : BAND_TEXT[band(category.score)]
               )}
             >
-              {category.score}
+              {category.score ?? "n/a"}
             </span>
           </a>
         </li>
@@ -163,10 +192,10 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
         <span
           className={cn(
             "w-8 text-right text-xs tabular-nums",
-            BAND_TEXT[band(category.score)]
+            category.score === null ? "text-muted-foreground/60" : BAND_TEXT[band(category.score)]
           )}
         >
-          {category.score}
+          {category.score ?? "n/a"}
         </span>
       </summary>
       <div className="pb-6 pl-8">
@@ -174,19 +203,23 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
         <ul className="space-y-1.5">
           {category.signals.map((signal) => (
             <li key={signal.id} className="flex items-start gap-2.5 text-xs">
-              <span
-                className={cn(
-                  "mt-px w-3 shrink-0",
-                  signal.earned ? "text-success" : "text-warn"
-                )}
-              >
-                {signal.earned ? "✓" : "⚠"}
+              <span className={cn("mt-px w-3 shrink-0", SIGNAL_TONE[signal.status])}>
+                {SIGNAL_MARK[signal.status]}
               </span>
-              <span className={cn("flex-1", !signal.earned && "text-muted-foreground")}>
+              <span className={cn("flex-1", signal.status !== "pass" && "text-muted-foreground")}>
                 {signal.text}
+                {signal.measurement && signal.status !== "not-measured" ? (
+                  <span className="text-muted-foreground/60 ml-2 tabular-nums">
+                    {formatMeasurement(signal.measurement)}
+                  </span>
+                ) : null}
               </span>
               <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-                {signal.earned ? `+${signal.points}` : `0 / ${signal.points}`}
+                {signal.status === "pass"
+                  ? `+${signal.points}`
+                  : signal.status === "fail"
+                    ? `0 / ${signal.points}`
+                    : "not scored"}
               </span>
             </li>
           ))}
@@ -258,7 +291,7 @@ export function ProfileBlock({ profile }: { profile: RepoProfile }) {
     framework: profile.framework,
     files: profile.files,
     maxDirectoryDepth: profile.maxDirectoryDepth,
-    medianFileLoc: profile.medianFileLoc,
+    medianFileBytes: profile.medianFileBytes,
     packageManager: profile.packageManager,
     scripts: profile.scripts,
     testFramework: profile.testFramework,
@@ -269,8 +302,16 @@ export function ProfileBlock({ profile }: { profile: RepoProfile }) {
   }
 
   return (
-    <pre className="border-border/60 bg-muted/40 overflow-x-auto border p-4 text-[11px] leading-relaxed">
-      {JSON.stringify(compact, null, 2)}
-    </pre>
+    <details className="border-border/60 group border-t">
+      <summary className="hover:bg-muted/50 flex cursor-pointer list-none items-center gap-4 py-3 transition-colors">
+        <span className="text-muted-foreground w-4 text-xs group-open:rotate-90">›</span>
+        <span className="text-muted-foreground flex-1 font-sans text-xs">
+          The compact structure a deep scan would send to the model
+        </span>
+      </summary>
+      <pre className="border-border/60 bg-muted/40 mb-2 overflow-x-auto border p-4 text-[11px] leading-relaxed">
+        {JSON.stringify(compact, null, 2)}
+      </pre>
+    </details>
   )
 }
