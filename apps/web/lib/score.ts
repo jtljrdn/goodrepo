@@ -3,6 +3,8 @@ import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 export type Signal = {
   id: SignalId
   points: number
+  /** What the check is, stated neutrally. Used when it neither passed nor failed. */
+  subject: string
   label: (p: RepoProfile) => string
   missing: (p: RepoProfile) => string
 }
@@ -31,11 +33,13 @@ export function formatBytes(bytes: number): string {
 const s = (
   id: SignalId,
   points: number,
+  subject: string,
   label: string | ((p: RepoProfile) => string),
   missing: string | ((p: RepoProfile) => string)
 ): Signal => ({
   id,
   points,
+  subject,
   label: typeof label === "function" ? label : () => label,
   missing: typeof missing === "function" ? missing : () => missing,
 })
@@ -46,22 +50,22 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Discoverability",
     question: "Can an agent quickly find the code that matters?",
     signals: [
-      s("readme", 15, "README.md at repository root", "No README at repository root"),
+      s("readme", 15, "README at the repository root", "README.md at repository root", "No README at repository root"),
       s(
         "readmeDepth",
-        10,
+        10, "README depth",
         (p) => `README covers the project in depth (${p.docs.readmeWords} words)`,
         (p) => `README is thin (${p.docs.readmeWords} words) — mostly a title and install line`
       ),
-      s("predictableRoot", 15, "Source lives under a single predictable root", "Source is split across several unrelated top-level folders"),
+      s("predictableRoot", 15, "Source under one predictable root", "Source lives under a single predictable root", "Source is split across several unrelated top-level folders"),
       s(
         "shallowTree",
-        15,
+        15, "Directory depth",
         (p) => `Directory tree stays shallow (max depth ${p.maxDirectoryDepth})`,
         (p) => `Directory tree is deep (max depth ${p.maxDirectoryDepth})`
       ),
-      s("colocatedTests", 15, "Tests sit next to the code they cover", "Tests live far from the code they cover"),
-      s("generatedExcluded", 15, "Generated output is ignored and excluded", "Generated output is committed alongside source"),
+      s("colocatedTests", 15, "Tests beside the code they cover", "Tests sit next to the code they cover", "Tests live far from the code they cover"),
+      s("generatedExcluded", 15, "Generated output excluded", "Generated output is ignored and excluded", "Generated output is committed alongside source"),
     ],
   },
   {
@@ -69,15 +73,15 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Instructions",
     question: "Are agent-facing instructions present and complete?",
     signals: [
-      s("agentsMd", 20, (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`, "No AGENTS.md"),
-      s("claudeMd", 5, "CLAUDE.md present", "No CLAUDE.md"),
-      s("docPackageManager", 10, (p) => `Package manager documented (${p.packageManager ?? "unknown"})`, "Package manager not documented"),
-      s("docTestCommand", 10, "Test command documented", "Test command not documented"),
-      s("docBuildCommand", 10, "Build and dev commands documented", "Build and dev commands not documented"),
-      s("docArchitecture", 15, "Architecture section explains the main boundaries", "Architecture undocumented"),
-      s("docDatabase", 10, "Database and migration workflow documented", "Database migration workflow undocumented"),
-      s("docApiConventions", 10, "API conventions documented", "API conventions undocumented"),
-      s("docCodeStyle", 10, "Code style and naming conventions documented", "Code style and naming conventions undocumented"),
+      s("agentsMd", 20, "AGENTS.md", (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`, "No AGENTS.md"),
+      s("claudeMd", 5, "CLAUDE.md", "CLAUDE.md present", "No CLAUDE.md"),
+      s("docPackageManager", 10, "Package manager documented", (p) => `Package manager documented (${p.packageManager ?? "unknown"})`, "Package manager not documented"),
+      s("docTestCommand", 10, "Test command documented", "Test command documented", "Test command not documented"),
+      s("docBuildCommand", 10, "Build and dev commands documented", "Build and dev commands documented", "Build and dev commands not documented"),
+      s("docArchitecture", 15, "Architecture documented", "Architecture section explains the main boundaries", "Architecture undocumented"),
+      s("docDatabase", 10, "Database workflow documented", "Database and migration workflow documented", "Database migration workflow undocumented"),
+      s("docApiConventions", 10, "API conventions documented", "API conventions documented", "API conventions undocumented"),
+      s("docCodeStyle", 10, "Code style documented", "Code style and naming conventions documented", "Code style and naming conventions undocumented"),
     ],
   },
   {
@@ -85,13 +89,13 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Testability",
     question: "Can an agent verify its own changes?",
     signals: [
-      s("testScript", 20, (p) => `test script defined (${p.scripts.test ?? ""})`, "No test script in package.json"),
-      s("testConfig", 15, (p) => `Test framework config detected (${p.testFramework})`, "No test framework config detected"),
-      s("testsExist", 20, (p) => `${p.testFiles} test files present`, "No test files found"),
-      s("typecheckScript", 15, "typecheck script defined", "No typecheck script — agents cannot check types in one command"),
-      s("singleTestDocumented", 10, "Running a single test is documented", "No documented way to run one test"),
-      s("ciRunsTests", 10, "CI runs the test suite", "CI does not run the test suite"),
-      s("coverage", 10, "Coverage reporting configured", "No coverage reporting"),
+      s("testScript", 20, "test script", (p) => `test script defined (${p.scripts.test ?? ""})`, "No test script in package.json"),
+      s("testConfig", 15, "Test framework config", (p) => `Test framework config detected (${p.testFramework})`, "No test framework config detected"),
+      s("testsExist", 20, "Test files", (p) => `${p.testFiles} test files present`, "No test files found"),
+      s("typecheckScript", 15, "typecheck script", "typecheck script defined", "No typecheck script — agents cannot check types in one command"),
+      s("singleTestDocumented", 10, "Running a single test documented", "Running a single test is documented", "No documented way to run one test"),
+      s("ciRunsTests", 10, "CI runs the tests", "CI runs the test suite", "CI does not run the test suite"),
+      s("coverage", 10, "Coverage reporting", "Coverage reporting configured", "No coverage reporting"),
     ],
   },
   {
@@ -101,15 +105,15 @@ export const CATEGORIES: CategoryDef[] = [
     signals: [
       s(
         "singleValidationLib",
-        20,
+        20, "One validation approach",
         (p) => `One validation approach across routes (${p.validationPatterns[0]})`,
         (p) => `Mixed validation approaches (${[...new Set(p.validationPatterns)].join(", ")})`
       ),
-      s("consistentRouteShape", 20, (p) => `${p.apiRoutes} routes share one handler shape`, (p) => `Route handlers across ${p.apiRoutes} routes use several shapes`),
-      s("consistentNaming", 15, "File and export naming is uniform", "File naming mixes conventions"),
-      s("singleDataLayer", 15, "Data access goes through one layer", "Data access is spread across components and routes"),
-      s("consistentErrors", 15, "Error handling follows one pattern", "Error handling differs between modules"),
-      s("lintConfig", 15, "Lint config enforces the conventions", "No lint config enforcing conventions"),
+      s("consistentRouteShape", 20, "Route handlers share one shape", (p) => `${p.apiRoutes} routes share one handler shape`, (p) => `Route handlers across ${p.apiRoutes} routes use several shapes`),
+      s("consistentNaming", 15, "Uniform file naming", "File and export naming is uniform", "File naming mixes conventions"),
+      s("singleDataLayer", 15, "Data access through one layer", "Data access goes through one layer", "Data access is spread across components and routes"),
+      s("consistentErrors", 15, "Error handling follows one pattern", "Error handling follows one pattern", "Error handling differs between modules"),
+      s("lintConfig", 15, "Lint config enforcing conventions", "Lint config enforces the conventions", "No lint config enforcing conventions"),
     ],
   },
   {
@@ -117,14 +121,14 @@ export const CATEGORIES: CategoryDef[] = [
     name: "Tooling",
     question: "Is setup, build, lint and test behaviour obvious?",
     signals: [
-      s("lockfile", 15, (p) => `Lockfile and pinned package manager (${p.packageManager})`, "No lockfile or pinned package manager"),
-      s("buildScript", 15, "build script defined", "No build script"),
-      s("lintScript", 15, "lint script defined", "No lint script"),
-      s("formatScript", 10, "format script defined", "No format script"),
-      s("envExample", 15, ".env.example lists required variables", "No .env.example — required env vars are unknown"),
-      s("container", 10, "Dockerfile or devcontainer present", "No Dockerfile or devcontainer"),
-      s("ciWorkflow", 10, "CI workflow defined", "No CI workflow"),
-      s("nodePinned", 10, "Runtime version pinned", "Runtime version not pinned"),
+      s("lockfile", 15, "Lockfile and pinned package manager", (p) => `Lockfile and pinned package manager (${p.packageManager})`, "No lockfile or pinned package manager"),
+      s("buildScript", 15, "build script", "build script defined", "No build script"),
+      s("lintScript", 15, "lint script", "lint script defined", "No lint script"),
+      s("formatScript", 10, "format script", "format script defined", "No format script"),
+      s("envExample", 15, "Environment variable template", ".env.example lists required variables", "No .env.example — required env vars are unknown"),
+      s("container", 10, "Dockerfile or devcontainer", "Dockerfile or devcontainer present", "No Dockerfile or devcontainer"),
+      s("ciWorkflow", 10, "CI workflow", "CI workflow defined", "No CI workflow"),
+      s("nodePinned", 10, "Runtime version pinned", "Runtime version pinned", "Runtime version not pinned"),
     ],
   },
   {
@@ -134,28 +138,37 @@ export const CATEGORIES: CategoryDef[] = [
     signals: [
       s(
         "smallFiles",
-        20,
+        20, "Median file size",
         (p) => `Median file is ${formatBytes(p.medianFileBytes)}`,
         (p) => `Median file is ${formatBytes(p.medianFileBytes)}, so most edits pull in a lot of context`
       ),
       s(
         "noMegaFiles",
-        15,
+        15, "Largest file size",
         (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`,
         (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`
       ),
       s(
         "featureFolders",
-        25,
+        25, "Folders named by feature",
         "Source folders are named after features, not file types",
         "Source folders are named after file types (components, hooks, utils), so one change is spread across them"
       ),
-      s("lowFanout", 20, "Common changes stay inside one module", "Common changes touch many modules at once"),
+      s("lowFanout", 20, "Change fan-out across modules", "Common changes stay inside one module", "Common changes touch many modules at once"),
     ],
   },
 ]
 
 export type SignalStatus = "pass" | "fail" | "not-measured"
+
+/**
+ * These two need to read inside function bodies, so a fast scan can never
+ * measure them. Any other null means the check does not apply to this
+ * repository: no UI layer to breach, no validation library to be consistent
+ * about, no code files to size. Both are unmeasured, but for different reasons,
+ * and a reader deserves to know which.
+ */
+const DEEP_SCAN_ONLY = new Set<SignalId>(["consistentRouteShape", "consistentErrors"])
 
 export type ScoredSignal = {
   id: SignalId
@@ -179,12 +192,14 @@ export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory 
   const signals: ScoredSignal[] = def.signals.map((sig) => {
     const value = p.has[sig.id]
     if (value === null || value === undefined) {
+      const reason = DEEP_SCAN_ONLY.has(sig.id)
+        ? "needs a deep scan"
+        : "does not apply to this repository"
       return {
         id: sig.id,
         points: sig.points,
         status: "not-measured",
-        text: "Not measured in a fast scan",
-        measurement: p.measurements[sig.id],
+        text: `${sig.subject} · ${reason}`,
       }
     }
     return {
