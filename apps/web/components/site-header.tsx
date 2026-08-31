@@ -6,9 +6,9 @@ export function SiteHeader({ children }: { children?: React.ReactNode }) {
       <div className="mx-auto flex h-12 max-w-5xl items-center gap-3 px-6">
         <Link href="/" className="flex items-center gap-2 text-sm font-medium">
           <span className="bg-foreground text-background inline-flex size-5 items-center justify-center text-[10px] leading-none font-bold">
-            R
+            G
           </span>
-          rigor
+          GoodRepo
         </Link>
         <div className="text-muted-foreground ml-auto flex items-center gap-3 text-xs">
           {children}

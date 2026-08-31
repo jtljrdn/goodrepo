@@ -41,7 +41,7 @@ export default function Page() {
             How easy is your codebase for AI agents to work in?
           </h1>
           <p className="text-muted-foreground mt-5 max-w-xl font-sans text-base leading-relaxed">
-            Paste a public repository. rigor reads its structure, instructions, and
+            Paste a public repository. GoodRepo reads its structure, instructions, and
             tooling, then returns an agent readiness score with the evidence behind
             every point.
           </p>
@@ -106,7 +106,7 @@ export default function Page() {
         <section className="border-border/60 border-t py-12">
           <h2 className="text-sm font-medium">Or run it locally</h2>
           <pre className="border-border/60 bg-muted/40 mt-4 border p-4 text-xs">
-            <span className="text-muted-foreground">$ </span>npx rigor
+            <span className="text-muted-foreground">$ </span>npx goodrepo
           </pre>
           <p className="text-muted-foreground mt-3 max-w-2xl font-sans text-sm leading-relaxed">
             Builds the profile on your machine and uploads only that. Private

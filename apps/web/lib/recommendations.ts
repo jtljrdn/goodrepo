@@ -32,7 +32,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
     impact: "High",
     source: "deep",
     evidence: (p) =>
-      `Rigor found ${p.apiRoutes} routes and ${p.directories} directories with no document describing how they relate. Agents spend context searching for the right implementation path before making a one-line change.`,
+      `GoodRepo found ${p.apiRoutes} routes and ${p.directories} directories with no document describing how they relate. Agents spend context searching for the right implementation path before making a one-line change.`,
     fix: "Add an Architecture section to AGENTS.md describing:",
     bullets: [
       "The primary entry points and what each is responsible for",

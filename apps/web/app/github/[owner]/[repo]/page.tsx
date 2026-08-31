@@ -17,8 +17,8 @@ export async function generateMetadata(props: PageProps<"/github/[owner]/[repo]"
   const { owner, repo } = await props.params
   const { overall } = scoreRepo(buildProfile(owner, repo))
   return {
-    title: `${owner}/${repo} — Agent Readiness ${overall}/100 · rigor`,
-    description: `rigor scored ${owner}/${repo} at ${overall}/100 for AI agent readiness.`,
+    title: `${owner}/${repo} — Agent Readiness ${overall}/100 · GoodRepo`,
+    description: `GoodRepo scored ${owner}/${repo} at ${overall}/100 for AI agent readiness.`,
   }
 }
 
