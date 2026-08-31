@@ -32,8 +32,6 @@ test("fails when two validation libraries are declared", () => {
 })
 
 test("declared dependencies beat the sample, which can miss a rare import", () => {
-  // honojs/hono uses zod in a couple of files. A 200-file sample missed them
-  // and the signal went unmeasured, though package.json states it plainly.
   const result = detectImports(withDeps([["a.ts", ["react"]]], ["zod"]))
   expect(result.has.singleValidationLib).toBe(true)
 })

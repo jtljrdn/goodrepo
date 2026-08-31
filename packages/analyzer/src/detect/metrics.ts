@@ -15,8 +15,6 @@ function median(values: number[]): number {
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }
 
-// A single-word lowercase name and a hyphenated one are the SAME convention.
-// Splitting them punishes repositories that are perfectly consistent.
 function casingOf(path: string): Casing {
   const base = path.slice(path.lastIndexOf("/") + 1)
   const name = base.split(".")[0] ?? ""

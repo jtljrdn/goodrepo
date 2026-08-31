@@ -3,7 +3,6 @@ import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 export type Signal = {
   id: SignalId
   points: number
-  /** What the check is, stated neutrally. Used when it neither passed nor failed. */
   subject: string
   label: (p: RepoProfile) => string
   missing: (p: RepoProfile) => string
@@ -161,13 +160,6 @@ export const CATEGORIES: CategoryDef[] = [
 
 export type SignalStatus = "pass" | "fail" | "not-measured"
 
-/**
- * These two need to read inside function bodies, so a fast scan can never
- * measure them. Any other null means the check does not apply to this
- * repository: no UI layer to breach, no validation library to be consistent
- * about, no code files to size. Both are unmeasured, but for different reasons,
- * and a reader deserves to know which.
- */
 const DEEP_SCAN_ONLY = new Set<SignalId>(["consistentRouteShape", "consistentErrors"])
 
 export type ScoredSignal = {

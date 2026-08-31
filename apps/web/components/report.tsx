@@ -48,11 +48,6 @@ export function Section({
   )
 }
 
-// A share is a ratio; everything else is a plain count. Both print alongside the
-// cutoff so a reader can argue with the threshold instead of guessing at it.
-//
-// Shares keep one decimal when they need it: rounding 0.7996 to "80%" next to a
-// failed signal that "passes at 80%" reads as a bug rather than a near miss.
 function percent(value: number): string {
   return `${Number((value * 100).toFixed(1))}%`
 }

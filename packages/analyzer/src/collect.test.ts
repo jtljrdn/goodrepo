@@ -102,8 +102,6 @@ test("chooseConfigFiles picks the known config and doc files", () => {
 })
 
 test("chooseConfigFiles ignores nested config files that no detector reads", () => {
-  // vercel/next.js has 868 package.json files. Matching them by basename filled
-  // the whole budget and starved the root README.
   const entries = [
     ...Array.from({ length: 300 }, (_, i) => entry(`packages/p${i}/package.json`)),
     entry("README.md"),

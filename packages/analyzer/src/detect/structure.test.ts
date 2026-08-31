@@ -45,8 +45,6 @@ test("fails generatedExcluded when build output is committed", () => {
 })
 
 test("a build/ directory holding source is not treated as build output", () => {
-  // honojs/hono keeps build scripts in build/. Treating that name as generated
-  // both failed the signal and hid five source files from analysis.
   expect(detectStructure(facts(["src/a.ts", "build/build.ts"])).has.generatedExcluded).toBe(true)
   expect(detectStructure(facts(["src/a.ts", "out/page.ts"])).has.generatedExcluded).toBe(true)
 })

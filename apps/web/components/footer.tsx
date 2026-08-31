@@ -14,8 +14,6 @@ async function starCount(): Promise<number | null> {
   }
 }
 
-// The star count and the copyright year both refresh hourly. Without this the
-// footer made an uncached GitHub call on every single page render.
 export async function Footer() {
   "use cache"
   cacheLife("hours")

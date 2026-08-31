@@ -34,7 +34,6 @@ export type TruncationCap = "tree"
 export type CodeFileFacts = {
   path: string
   bytes: number
-  /** null when the file was not part of the import sample. */
   imports: string[] | null
 }
 
@@ -66,7 +65,6 @@ export type RepoProfile = RepoMeta & {
   docs: { readmeWords: number; agentsMdWords: number; sections: string[] }
   has: Record<SignalId, boolean | null>
   measurements: Partial<Record<SignalId, Measurement>>
-  /** Set when the import signals came from a sample rather than every file. */
   sample: SampleInfo | null
   truncated: null | { cap: TruncationCap; detail: string }
 }

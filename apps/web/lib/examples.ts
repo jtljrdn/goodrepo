@@ -1,13 +1,3 @@
-/**
- * The repositories offered on the home page, pinned to a commit.
- *
- * Pinning serves two purposes. It guarantees every visitor who clicks one gets
- * the same cached report instead of paying for a fresh scan whenever the
- * repository gains a commit, and it skips the head-resolution request entirely.
- *
- * Bump a SHA when the report should reflect newer work. Nothing breaks if one
- * goes stale; the report simply shows the commit it actually scanned.
- */
 export const EXAMPLES = [
   { slug: "vercel/next.js", sha: "d434afa837b995d2db6f101e3b705461a250c655" },
   { slug: "shadcn-ui/ui", sha: "63c1308d112b6b1205d86244a156cca1abef5087" },

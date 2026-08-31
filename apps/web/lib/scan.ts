@@ -50,22 +50,6 @@ export function failureMessage(failure: ScanFailure): { title: string; detail: s
   }
 }
 
-/**
- * The scan never downloads the repository. It reads the file tree once, which
- * carries every path and every file's byte size, then fetches only the config
- * and doc files plus a bounded sample of code files for their imports.
- *
- * vercel/next.js costs roughly 3 MB this way against 48 MB as a tarball.
- *
- * Everything below the commit SHA is cached against it. A SHA names an immutable
- * snapshot, so a hit can never be stale: the same commit always scans to the
- * same result. Ten people opening the same report cost one scan.
- *
- * The cache is remote, not in-memory. Plain "use cache" does not persist across
- * server instances or restarts, so on serverless each cold start would rescan.
- * A remote lookup costs a network roundtrip against a scan that costs seconds
- * and hundreds of GitHub requests against a 5,000/hour limit.
- */
 async function scanAtSha(owner: string, repo: string, sha: string): Promise<ScanResult> {
   "use cache: remote"
   cacheLife("max")
@@ -82,8 +66,6 @@ async function scanAtSha(owner: string, repo: string, sha: string): Promise<Scan
   if (rejection) return { ok: false, failure: rejection }
 
   const configPaths = chooseConfigFiles(tree.entries)
-  // Without a token the GraphQL API is unavailable, so we fetch only the config
-  // files over REST and leave the import signals unmeasured rather than guessing.
   const samplePaths = token ? chooseSample(tree.entries) : []
   const wanted = [...configPaths, ...samplePaths]
 
@@ -108,13 +90,9 @@ async function scanAtSha(owner: string, repo: string, sha: string): Promise<Scan
 }
 
 export async function runScan(owner: string, repo: string): Promise<ScanResult> {
-  // Home page examples are pinned, which both guarantees a cache hit and skips
-  // this lookup. Everything else costs one request to learn the current commit.
   const pinned = pinnedSha(owner, repo)
   if (pinned) return scanAtSha(owner, repo, pinned)
 
-  // "HEAD" resolves the default branch server-side, so this costs one request
-  // rather than two. Everything after it is cached against the SHA it returns.
   const sha = await fetchHeadSha(owner, repo, "HEAD", process.env.GITHUB_TOKEN)
   if (isFailure(sha)) return { ok: false, failure: sha }
 

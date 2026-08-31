@@ -34,14 +34,6 @@ function dirOf(path: string): string {
   return slash === -1 ? "" : path.slice(0, slash)
 }
 
-/**
- * Chooses which code files to fetch bodies for.
- *
- * Sampling is round-robin across directories rather than by size or by order,
- * so the imports we measure reflect the whole repository instead of whichever
- * folder happens to sort first. Non-test files come before test files, because
- * a test's imports say little about how the product code is wired.
- */
 export function chooseSample(entries: TreeEntry[], limit = CAPS.importSample): string[] {
   const eligible = entries.filter(
     (e) => isCodeFile(e.path) && e.bytes > 0 && e.bytes <= CAPS.perFileBytes
@@ -75,14 +67,6 @@ export function chooseSample(entries: TreeEntry[], limit = CAPS.importSample): s
   return chosen
 }
 
-/**
- * Config and doc files worth fetching.
- *
- * Only ROOT files and the two known directories qualify. Every detector reads
- * config by exact root path, so a nested match is dead weight: vercel/next.js
- * has 868 package.json files, and matching them by basename filled the entire
- * budget with files nothing reads while the root README never got fetched.
- */
 export function chooseConfigFiles(entries: TreeEntry[]): string[] {
   const usable = entries.filter((e) => e.bytes > 0 && e.bytes <= CAPS.perFileBytes)
   const root = usable.filter((e) => !e.path.includes("/") && isKeptFile(e.path))

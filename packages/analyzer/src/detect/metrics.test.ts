@@ -48,8 +48,6 @@ test("an empty repository does not divide by zero and is not scored", () => {
 })
 
 test("lowercase and kebab-case are one convention, not two", () => {
-  // honojs/hono: 337 single-word lowercase files, 47 hyphenated. Splitting them
-  // scored 87.8% and failed a repository that is entirely consistent.
   const mixed = detectMetrics(facts([["context.ts", 1], ["serve-static.ts", 1], ["hono.ts", 1]]))
   expect(mixed.measurements.consistentNaming?.value).toBe(1)
   expect(mixed.has.consistentNaming).toBe(true)

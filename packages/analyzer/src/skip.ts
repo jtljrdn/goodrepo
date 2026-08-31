@@ -1,8 +1,6 @@
 import { CAPS } from "./thresholds"
 
-// "build" and "out" are deliberately absent: both are commonly SOURCE directories
-// (hono keeps build scripts in build/), and a false "you committed build output"
-// is worse than missing a real one.
+// "build" and "out" are omitted on purpose: both are commonly source directories.
 export const GENERATED_DIRS = [
   "dist", ".next", "coverage", ".turbo", ".output", ".svelte-kit",
 ] as const

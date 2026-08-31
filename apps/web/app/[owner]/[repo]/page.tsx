@@ -12,13 +12,10 @@ import {
 import { failureMessage, runScan } from "@/lib/scan"
 import { recommend } from "@/lib/recommendations"
 
-// vercel/next.js is 50.7 MB and ~31,800 files; 300s is the Hobby maximum.
 export const maxDuration = 300
 
 export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
-  // The score is deliberately absent: producing it here would run a second full
-  // scan just to build a title, doubling the work and the rate-limit cost.
   return {
     title: `${owner}/${repo} · GoodRepo`,
     description: `GoodRepo scores ${owner}/${repo} for AI agent readiness from measurable repository signals.`,

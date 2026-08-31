@@ -8,8 +8,6 @@ export type ScanFailure = {
 const API = "https://api.github.com"
 const GRAPHQL = "https://api.github.com/graphql"
 
-// One GraphQL document per batch. 100 aliases keeps the query well under
-// GitHub's node limit while still collapsing a whole sample into one round trip.
 const BATCH_SIZE = 100
 
 function headers(token?: string): Record<string, string> {
@@ -35,10 +33,6 @@ export function isFailure(value: unknown): value is ScanFailure {
   return typeof value === "object" && value !== null && "kind" in value && "message" in value
 }
 
-/**
- * Reads the tree we already have rather than a separate /contents/ request.
- * The tree lists every path, so the root listing was always redundant.
- */
 export function classifyRepo(entries: TreeEntry[]): ScanFailure | null {
   if (entries.length === 0) {
     return { kind: "empty", message: "This repository is empty, so there is nothing to analyze." }
@@ -156,11 +150,6 @@ function buildQuery(owner: string, repo: string, sha: string, paths: string[]): 
   } }`
 }
 
-/**
- * Fetches many file bodies in one round trip. Missing or binary files come back
- * null rather than failing the batch, so callers can ask for files that may not
- * exist without checking first.
- */
 export async function fetchBlobs(
   owner: string,
   repo: string,
@@ -174,8 +163,6 @@ export async function fetchBlobs(
     batches.push(paths.slice(start, start + BATCH_SIZE))
   }
 
-  // Run the batches together. A GraphQL round trip is close to a second, so
-  // three sequential batches dominated the whole scan.
   const responses = await Promise.all(
     batches.map(async (batch) => {
       const res = await fetch(GRAPHQL, {
@@ -211,7 +198,6 @@ export async function fetchBlobs(
   return out
 }
 
-/** Unauthenticated fallback. One request per file, so callers keep the list short. */
 export async function fetchBlobsRest(
   owner: string,
   repo: string,
