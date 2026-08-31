@@ -17,10 +17,18 @@ import { pinnedSha } from "@/lib/examples"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
 export type ScanResult =
-  | { ok: true; profile: RepoProfile; overall: number | null; categories: ScoredCategory[] }
+  | {
+      ok: true
+      profile: RepoProfile
+      overall: number | null
+      categories: ScoredCategory[]
+    }
   | { ok: false; failure: ScanFailure }
 
-export function failureMessage(failure: ScanFailure): { title: string; detail: string } {
+export function failureMessage(failure: ScanFailure): {
+  title: string
+  detail: string
+} {
   switch (failure.kind) {
     case "not-js":
       return {
@@ -37,10 +45,14 @@ export function failureMessage(failure: ScanFailure): { title: string; detail: s
     case "rate-limited":
       return {
         title: "Try again shortly",
-        detail: "GitHub is rate limiting requests right now. Wait a minute and scan again.",
+        detail:
+          "GitHub is rate limiting requests right now. Wait a minute and scan again.",
       }
     case "empty":
-      return { title: "Nothing to scan", detail: "That repository has no files in it yet." }
+      return {
+        title: "Nothing to scan",
+        detail: "That repository has no files in it yet.",
+      }
     case "too-large":
       return {
         title: "Too large to scan",
@@ -50,7 +62,11 @@ export function failureMessage(failure: ScanFailure): { title: string; detail: s
   }
 }
 
-async function scanAtSha(owner: string, repo: string, sha: string): Promise<ScanResult> {
+async function scanAtSha(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<ScanResult> {
   "use cache: remote"
   cacheLife("max")
 
@@ -81,7 +97,10 @@ async function scanAtSha(owner: string, repo: string, sha: string): Promise<Scan
     sampled,
     { ...meta, commitSha: sha.slice(0, 7) },
     tree.truncated
-      ? { cap: "tree" as const, detail: "GitHub truncated the file listing for this repository." }
+      ? {
+          cap: "tree" as const,
+          detail: "GitHub truncated the file listing for this repository.",
+        }
       : null
   )
 
@@ -89,7 +108,10 @@ async function scanAtSha(owner: string, repo: string, sha: string): Promise<Scan
   return { ok: true, profile, overall, categories }
 }
 
-export async function runScan(owner: string, repo: string): Promise<ScanResult> {
+export async function runScan(
+  owner: string,
+  repo: string
+): Promise<ScanResult> {
   const pinned = pinnedSha(owner, repo)
   if (pinned) return scanAtSha(owner, repo, pinned)
 

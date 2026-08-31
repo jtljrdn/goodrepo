@@ -18,24 +18,16 @@ npx skills add jtljrdn/goodrepo
 
 ## Run it locally
 
-Requires [Bun](https://bun.sh) 1.3.10 or later.
-
 ```sh
+git clone https://github.com/jtljrdn/goodrepo.git
+cd goodrepo
 bun install
-cp apps/web/.env.example .env
-ln -s ../../.env apps/web/.env
+cp .env.example .env.local // or vercel env pull .env.local
 bun run dev
 ```
 
-Env files live at the repo root. Next.js only reads `.env*` from its own project directory, so `apps/web/.env` is a symlink to the root file. It is gitignored, so create it once per clone.
-
-The app runs at `http://localhost:3000`. `GITHUB_TOKEN` is optional; without it you share the anonymous GitHub rate limit of 60 requests per hour.
-
-```sh
-bun run test        # every workspace test suite
-bun run lint        # eslint
-bun run typecheck   # tsc --noEmit
-```
+The only environment variable that needs to be set is `GITHUB_TOKEN`, which can be obtained from [GitHub](https://github.com/settings/tokens). I recommend
+a fine-grained token with only the public repository read access and no other permissions.
 
 ## Where the code lives
 
@@ -49,4 +41,4 @@ Turborepo monorepo with Bun workspaces.
 | `packages/eslint-config`, `packages/typescript-config` | Shared config |
 | `skills/goodrepo-scan` | The published agent skill |
 
-See [AGENTS.md](AGENTS.md) for architecture boundaries, dependency rules and conventions.
+See [AGENTS.md](AGENTS.md) for architecture boundaries, dependency rules, and conventions.

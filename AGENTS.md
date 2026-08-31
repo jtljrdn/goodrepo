@@ -42,7 +42,7 @@ bun install          # install workspace dependencies
 bun run dev          # start the web app
 bun run test         # run every workspace test suite
 bun run lint         # eslint across all workspaces
-bun run typecheck    # tsc --noEmit across all workspaces
+bun run typecheck    # next typegen, then tsc --noEmit across all workspaces
 bun run build        # production build
 ```
 
@@ -55,23 +55,22 @@ cd packages/analyzer && bun test src/detect/docs.test.ts
 cd packages/analyzer && bun test src/detect/docs.test.ts -t "case name"
 ```
 
+`web`'s typecheck runs `next typegen` first. `PageProps` and the other route type
+helpers are generated into `.next/types`, so `tsc` alone fails on a clean checkout
+with `Cannot find name 'PageProps'`. Never hand-write those types.
+
 Tests are pure and deterministic: no network, no database. Detector tests build fixture inputs in memory, so a new detector should be testable the same way.
 
 ## Environment
 
-Env files live at the **repo root**, not in `apps/web`. Next.js only reads `.env*`
-from its own project directory, so `apps/web/.env` and `apps/web/.env.local` are
-symlinks pointing at the root files.
+Env files live at the **repo root**, not in `apps/web`. The web workspace scripts
+use Bun's `--env-file` option to load `../../.env` followed by
+`../../.env.local`; the latter takes precedence. `turbo.json` tracks both root
+files as global dependencies for cache correctness. Do not create app-local env
+files, symlinks, or custom env launchers.
 
-Both symlinks are gitignored, so recreate them once after a fresh clone:
-
-```sh
-ln -s ../../.env apps/web/.env
-ln -s ../../.env.local apps/web/.env.local
-```
-
-Then copy `apps/web/.env.example` to `.env` at the root and fill it in. Only
-`GITHUB_TOKEN` is used, and only to raise the GitHub API rate limit; scans of
-public repositories work without it.
-
-`.env.local` at the root is written by `vercel env pull`. Never edit it by hand.
+Prefer `.env.local`, generated at the root by `vercel env pull .env.local`.
+Developers not using Vercel can copy `.env.example` to `.env.local` and fill it
+in. Only `GITHUB_TOKEN` is used, and only to raise the GitHub API rate limit;
+scans of public repositories work without it. A root `.env` is supported as a
+lower priority fallback but is not required.

@@ -4,13 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "bun --env-file=../../.env --env-file=../../.env.local next dev",
+    "build": "bun --env-file=../../.env --env-file=../../.env.local next build",
+    "start": "bun --env-file=../../.env --env-file=../../.env.local next start",
     "test": "bun test",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun --env-file=../../.env --env-file=../../.env.local next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.0",

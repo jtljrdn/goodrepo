@@ -29,11 +29,11 @@ export function ScanForm({ className }: { className?: string }) {
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
       <div
         className={cn(
-          "focus-within:border-ring flex h-14 items-center border bg-card pl-4 transition-colors",
+          "flex h-14 items-center border bg-card pl-4 transition-colors focus-within:border-ring",
           error && "border-destructive"
         )}
       >
-        <span className="text-muted-foreground hidden text-sm select-none sm:inline">
+        <span className="hidden text-sm text-muted-foreground select-none sm:inline">
           github.com/
         </span>
         <input
@@ -47,7 +47,7 @@ export function ScanForm({ className }: { className?: string }) {
           autoCapitalize="off"
           autoComplete="off"
           aria-label="GitHub repository"
-          className="placeholder:text-muted-foreground/60 h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none"
+          className="h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-muted-foreground/60"
         />
         <Button type="submit" size="lg" disabled={pending} className="m-1 px-4">
           {pending ? "Scanning" : "Scan"}

@@ -38,10 +38,10 @@ export function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="border-border/60 border-t py-10">
+    <section className="border-t border-border/60 py-10">
       <div className="mb-6 flex items-baseline justify-between gap-4">
         <h2 className="text-sm font-medium tracking-tight">{title}</h2>
-        {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
       </div>
       {children}
     </section>
@@ -53,7 +53,8 @@ function percent(value: number): string {
 }
 
 function formatMeasurement({ value, threshold, unit }: Measurement): string {
-  if (unit === "share") return `${percent(value)} · passes at ${percent(threshold)}`
+  if (unit === "share")
+    return `${percent(value)} · passes at ${percent(threshold)}`
   return `${value.toLocaleString()} ${unit} · threshold ${threshold.toLocaleString()}`
 }
 
@@ -70,8 +71,8 @@ export function ScoreDial({ score }: { score: number | null }) {
 
   if (score === null) {
     return (
-      <div className="border-border/60 flex size-32 shrink-0 items-center justify-center border">
-        <span className="text-muted-foreground text-xs">not scored</span>
+      <div className="flex size-32 shrink-0 items-center justify-center border border-border/60">
+        <span className="text-xs text-muted-foreground">not scored</span>
       </div>
     )
   }
@@ -100,8 +101,10 @@ export function ScoreDial({ score }: { score: number | null }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl leading-none font-medium tabular-nums">{score}</span>
-        <span className="text-muted-foreground mt-1 text-[10px]">/ 100</span>
+        <span className="text-3xl leading-none font-medium tabular-nums">
+          {score}
+        </span>
+        <span className="mt-1 text-[10px] text-muted-foreground">/ 100</span>
       </div>
     </div>
   )
@@ -126,14 +129,22 @@ export function ReportHeadline({
   return (
     <div className="flex flex-col gap-8 py-10 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <p className="text-muted-foreground text-xs">
-          {profile.owner}/<span className="text-foreground">{profile.repo}</span>
+        <p className="text-xs text-muted-foreground">
+          {profile.owner}/
+          <span className="text-foreground">{profile.repo}</span>
         </p>
-        <h1 className="mt-3 text-2xl font-medium tracking-tight">Agent Readiness</h1>
-        <p className={cn("mt-1 text-sm", tone ? BAND_TEXT[tone] : "text-muted-foreground")}>
+        <h1 className="mt-3 text-2xl font-medium tracking-tight">
+          Agent Readiness
+        </h1>
+        <p
+          className={cn(
+            "mt-1 text-sm",
+            tone ? BAND_TEXT[tone] : "text-muted-foreground"
+          )}
+        >
           {tone ? BAND_LABEL[tone] : "No categories could be scored"}
         </p>
-        <ul className="text-muted-foreground mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {meta.map((item) => (
             <li key={item}>{item}</li>
           ))}
@@ -144,20 +155,27 @@ export function ReportHeadline({
   )
 }
 
-export function CategorySummary({ categories }: { categories: ScoredCategory[] }) {
+export function CategorySummary({
+  categories,
+}: {
+  categories: ScoredCategory[]
+}) {
   return (
-    <ul className="divide-border/60 divide-y border-y">
+    <ul className="divide-y divide-border/60 border-y">
       {categories.map((category) => (
         <li key={category.key}>
           <a
             href={`#${category.key}`}
-            className="hover:bg-muted/50 flex items-center gap-4 px-1 py-3 transition-colors"
+            className="flex items-center gap-4 px-1 py-3 transition-colors hover:bg-muted/50"
           >
             <span className="w-40 shrink-0 text-xs">{category.name}</span>
-            <span className="bg-border/60 relative h-1 flex-1">
+            <span className="relative h-1 flex-1 bg-border/60">
               {category.score === null ? null : (
                 <span
-                  className={cn("absolute inset-y-0 left-0", BAND_BG[band(category.score)])}
+                  className={cn(
+                    "absolute inset-y-0 left-0",
+                    BAND_BG[band(category.score)]
+                  )}
                   style={{ width: `${category.score}%` }}
                 />
               )}
@@ -165,7 +183,9 @@ export function CategorySummary({ categories }: { categories: ScoredCategory[] }
             <span
               className={cn(
                 "w-8 shrink-0 text-right text-xs tabular-nums",
-                category.score === null ? "text-muted-foreground/60" : BAND_TEXT[band(category.score)]
+                category.score === null
+                  ? "text-muted-foreground/60"
+                  : BAND_TEXT[band(category.score)]
               )}
             >
               {category.score ?? "n/a"}
@@ -181,40 +201,53 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
   return (
     <details
       id={category.key}
-      className="border-border/60 group scroll-mt-16 border-b last:border-b-0"
+      className="group scroll-mt-16 border-b border-border/60 last:border-b-0"
     >
-      <summary className="hover:bg-muted/50 flex cursor-pointer list-none items-center gap-4 py-3 transition-colors">
-        <span className="text-muted-foreground w-4 text-xs group-open:rotate-90">›</span>
+      <summary className="flex cursor-pointer list-none items-center gap-4 py-3 transition-colors hover:bg-muted/50">
+        <span className="w-4 text-xs text-muted-foreground group-open:rotate-90">
+          ›
+        </span>
         <span className="flex-1 text-xs">{category.name}</span>
-        <span className="text-muted-foreground hidden text-xs sm:inline">
+        <span className="hidden text-xs text-muted-foreground sm:inline">
           {category.earnedPoints} / {category.totalPoints} pts
         </span>
         <span
           className={cn(
             "w-8 text-right text-xs tabular-nums",
-            category.score === null ? "text-muted-foreground/60" : BAND_TEXT[band(category.score)]
+            category.score === null
+              ? "text-muted-foreground/60"
+              : BAND_TEXT[band(category.score)]
           )}
         >
           {category.score ?? "n/a"}
         </span>
       </summary>
       <div className="pb-6 pl-8">
-        <p className="text-muted-foreground mb-4 font-sans text-xs">{category.question}</p>
+        <p className="mb-4 font-sans text-xs text-muted-foreground">
+          {category.question}
+        </p>
         <ul className="space-y-1.5">
           {category.signals.map((signal) => (
             <li key={signal.id} className="flex items-start gap-2.5 text-xs">
-              <span className={cn("mt-px w-3 shrink-0", SIGNAL_TONE[signal.status])}>
+              <span
+                className={cn("mt-px w-3 shrink-0", SIGNAL_TONE[signal.status])}
+              >
                 {SIGNAL_MARK[signal.status]}
               </span>
-              <span className={cn("flex-1", signal.status !== "pass" && "text-muted-foreground")}>
+              <span
+                className={cn(
+                  "flex-1",
+                  signal.status !== "pass" && "text-muted-foreground"
+                )}
+              >
                 {signal.text}
                 {signal.measurement && signal.status !== "not-measured" ? (
-                  <span className="text-muted-foreground/60 ml-2 tabular-nums">
+                  <span className="ml-2 text-muted-foreground/60 tabular-nums">
                     {formatMeasurement(signal.measurement)}
                   </span>
                 ) : null}
               </span>
-              <span className="text-muted-foreground/60 shrink-0 tabular-nums">
+              <span className="shrink-0 text-muted-foreground/60 tabular-nums">
                 {signal.status === "pass"
                   ? `+${signal.points}`
                   : signal.status === "fail"
@@ -239,9 +272,9 @@ export function RecommendationItem({
   profile: RepoProfile
 }) {
   return (
-    <li className="border-border/60 border-b py-6 last:border-b-0">
+    <li className="border-b border-border/60 py-6 last:border-b-0">
       <div className="flex items-start gap-4">
-        <span className="text-muted-foreground/60 w-6 shrink-0 text-xs tabular-nums">
+        <span className="w-6 shrink-0 text-xs text-muted-foreground/60 tabular-nums">
           {String(index + 1).padStart(2, "0")}
         </span>
         <div className="min-w-0 flex-1">
@@ -255,22 +288,22 @@ export function RecommendationItem({
             >
               {recommendation.impact} impact
             </span>
-            <span className="text-muted-foreground/60 text-[10px]">
+            <span className="text-[10px] text-muted-foreground/60">
               {recommendation.category}
             </span>
             {recommendation.source === "deep" ? (
-              <span className="text-muted-foreground/60 border-border border px-1.5 py-px text-[10px]">
+              <span className="border border-border px-1.5 py-px text-[10px] text-muted-foreground/60">
                 deep scan
               </span>
             ) : null}
           </div>
-          <p className="text-muted-foreground mt-3 max-w-2xl font-sans text-sm leading-relaxed">
+          <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
             {recommendation.evidence(profile)}
           </p>
-          <div className="bg-muted/40 border-border/60 mt-4 border p-4">
+          <div className="mt-4 border border-border/60 bg-muted/40 p-4">
             <p className="text-xs">{recommendation.fix}</p>
             {recommendation.bullets.length > 0 ? (
-              <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                 {recommendation.bullets.map((bullet) => (
                   <li key={bullet} className="flex gap-2">
                     <span className="text-muted-foreground/50">—</span>
@@ -302,14 +335,16 @@ export function ProfileBlock({ profile }: { profile: RepoProfile }) {
   }
 
   return (
-    <details className="border-border/60 group border-t">
-      <summary className="hover:bg-muted/50 flex cursor-pointer list-none items-center gap-4 py-3 transition-colors">
-        <span className="text-muted-foreground w-4 text-xs group-open:rotate-90">›</span>
-        <span className="text-muted-foreground flex-1 font-sans text-xs">
+    <details className="group border-t border-border/60">
+      <summary className="flex cursor-pointer list-none items-center gap-4 py-3 transition-colors hover:bg-muted/50">
+        <span className="w-4 text-xs text-muted-foreground group-open:rotate-90">
+          ›
+        </span>
+        <span className="flex-1 font-sans text-xs text-muted-foreground">
           The compact structure a deep scan would send to the model
         </span>
       </summary>
-      <pre className="border-border/60 bg-muted/40 mb-2 overflow-x-auto border p-4 text-[11px] leading-relaxed">
+      <pre className="mb-2 overflow-x-auto border border-border/60 bg-muted/40 p-4 text-[11px] leading-relaxed">
         {JSON.stringify(compact, null, 2)}
       </pre>
     </details>

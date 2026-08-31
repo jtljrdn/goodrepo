@@ -13,7 +13,13 @@ test("accepts the shapes people paste", () => {
 })
 
 test("rejects anything that is not owner/repo", () => {
-  for (const input of ["", "vercel", "github.com/vercel", "a/b/c", "https://gitlab.com"]) {
+  for (const input of [
+    "",
+    "vercel",
+    "github.com/vercel",
+    "a/b/c",
+    "https://gitlab.com",
+  ]) {
     expect(parseRepoInput(input)).toBeNull()
   }
 })
