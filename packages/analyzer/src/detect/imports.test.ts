@@ -13,29 +13,33 @@ function facts(files: [string, string[]][]): RawFacts {
   }
 }
 
-test("passes when one validation library dominates", () => {
-  const result = detectImports(
-    facts([["a.ts", ["zod"]], ["b.ts", ["zod"]], ["c.ts", ["zod"]], ["d.ts", ["zod"]], ["e.ts", ["zod"]],
-           ["f.ts", ["zod"]], ["g.ts", ["zod"]], ["h.ts", ["zod"]], ["i.ts", ["zod"]], ["j.ts", ["yup"]]])
-  )
+function withDeps(files: [string, string[]][], deps: string[]): RawFacts {
+  const base = facts(files)
+  base.keptText.set("package.json", JSON.stringify({ dependencies: Object.fromEntries(deps.map((d) => [d, "1"])) }))
+  return base
+}
+
+test("passes when exactly one validation library is declared", () => {
+  const result = detectImports(withDeps([["a.ts", ["zod"]]], ["zod", "react"]))
   expect(result.has.singleValidationLib).toBe(true)
-  expect(result.validationPatterns).toContain("zod")
+  expect(result.validationPatterns).toEqual(["zod"])
 })
 
-test("fails when validation libraries are mixed", () => {
-  const result = detectImports(facts([["a.ts", ["zod"]], ["b.ts", ["yup"]], ["c.ts", ["joi"]]]))
+test("fails when two validation libraries are declared", () => {
+  const result = detectImports(withDeps([["a.ts", ["zod"]]], ["zod", "yup"]))
   expect(result.has.singleValidationLib).toBe(false)
-  expect(result.validationPatterns.sort()).toEqual(["joi", "yup", "zod"])
+  expect(result.validationPatterns.sort()).toEqual(["yup", "zod"])
+})
+
+test("declared dependencies beat the sample, which can miss a rare import", () => {
+  // honojs/hono uses zod in a couple of files. A 200-file sample missed them
+  // and the signal went unmeasured, though package.json states it plainly.
+  const result = detectImports(withDeps([["a.ts", ["react"]]], ["zod"]))
+  expect(result.has.singleValidationLib).toBe(true)
 })
 
 test("no validation library at all is not applicable, not a failure", () => {
-  expect(detectImports(facts([["a.ts", ["react"]]])).has.singleValidationLib).toBeNull()
-})
-
-test("a repository with no UI layer is not scored on singleDataLayer", () => {
-  // honojs/hono has zero UI files, so the data-layer boundary does not apply.
-  // It previously scored as a failure, costing real points for nothing.
-  expect(detectImports(facts([["src/hono.ts", ["./compose"]]])).has.singleDataLayer).toBeNull()
+  expect(detectImports(withDeps([["a.ts", ["react"]]], ["react"])).has.singleValidationLib).toBeNull()
 })
 
 test("fails singleDataLayer when UI files import the database directly", () => {

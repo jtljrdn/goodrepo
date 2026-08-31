@@ -71,6 +71,7 @@ test("a healthy repository earns the signals it should", () => {
       file("package.json", JSON.stringify({
         packageManager: "bun@1.3.10",
         engines: { node: ">=20" },
+        dependencies: { zod: "^4.0.0" },
         scripts: { build: "next build", dev: "next dev", test: "vitest run", lint: "eslint", typecheck: "tsc --noEmit" },
       })),
       file("bun.lock", null),

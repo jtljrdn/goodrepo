@@ -1,5 +1,6 @@
 import { passes, THRESHOLDS } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
+import { readPackageJson } from "./manifest"
 
 const VALIDATION_LIBS = ["zod", "yup", "joi", "valibot", "superstruct", "ajv", "arktype"]
 const DB_LIBS = [
@@ -37,6 +38,20 @@ function isUiFile(path: string): boolean {
   return path.split("/").some((seg) => UI_SEGMENTS.has(seg))
 }
 
+function declaredValidationLibs(facts: RawFacts): string[] {
+  const pkg = readPackageJson(facts)
+  if (!pkg) return []
+  const names = new Set<string>()
+  for (const group of ["dependencies", "devDependencies", "peerDependencies"]) {
+    const deps = pkg[group]
+    if (typeof deps !== "object" || deps === null) continue
+    for (const name of Object.keys(deps)) {
+      if (VALIDATION_LIBS.includes(name)) names.add(name)
+    }
+  }
+  return [...names]
+}
+
 export function detectImports(facts: RawFacts) {
   const measurements: Partial<Record<SignalId, Measurement>> = {}
   // Only sampled files have imports. Everything below measures the sample, and
@@ -45,18 +60,11 @@ export function detectImports(facts: RawFacts) {
     (f): f is typeof f & { imports: string[] } => f.imports !== null
   )
 
-  const validationCounts = new Map<string, number>()
-  for (const file of sampled) {
-    for (const specifier of file.imports) {
-      const pkg = rootPackage(specifier)
-      if (VALIDATION_LIBS.includes(pkg)) {
-        validationCounts.set(pkg, (validationCounts.get(pkg) ?? 0) + 1)
-      }
-    }
-  }
-  const validationTotal = [...validationCounts.values()].reduce((n, c) => n + c, 0)
-  const validationTop = Math.max(0, ...validationCounts.values())
-  const validationShare = validationTotal > 0 ? validationTop / validationTotal : 0
+  // Declared dependencies, not sampled imports. A repository can only validate
+  // with what it depends on, so package.json answers this exactly and for free,
+  // where a sample can miss a library used in only one or two files.
+  const declared = declaredValidationLibs(facts)
+  const validationShare = declared.length === 0 ? 0 : 1 / declared.length
   measurements.singleValidationLib = measure("validationDominance", validationShare)
 
   const uiFiles = sampled.filter((f) => isUiFile(f.path))
@@ -77,14 +85,14 @@ export function detectImports(facts: RawFacts) {
   measurements.lowFanout = measure("medianFanout", medianFanout)
 
   return {
-    validationPatterns: [...validationCounts.keys()],
+    validationPatterns: declared,
     apiRoutes: facts.paths.filter((p) => ROUTE_PATTERNS.some((re) => re.test(p))).length,
     measurements,
     has: {
       // A repository that does no validation is not inconsistent, and one with no
       // UI layer has no data-layer boundary to violate. Both are not-applicable,
       // which is null, never a failed point.
-      singleValidationLib: validationTotal > 0 ? passes("validationDominance", validationShare) : null,
+      singleValidationLib: declared.length > 0 ? declared.length === 1 : null,
       singleDataLayer: uiFiles.length > 0 ? passes("directDbInUi", dbShare) : null,
       lowFanout: sampled.length > 0 ? passes("medianFanout", medianFanout) : null,
     },
