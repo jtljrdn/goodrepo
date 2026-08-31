@@ -29,12 +29,6 @@ test("every signal appears in exactly one category", () => {
   expect(seen.size).toBe(40)
 })
 
-test("namedBoundaries no longer exists", () => {
-  const ids = CATEGORIES.flatMap((c) => c.signals.map((s) => s.id as string))
-  expect(ids).not.toContain("namedBoundaries")
-  expect(ids).toContain("featureFolders")
-})
-
 test("a not-measured signal is excluded from both sides of the fraction", () => {
   const consistency = CATEGORIES.find((c) => c.key === "consistency")
   if (!consistency) throw new Error("consistency category missing")

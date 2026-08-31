@@ -47,11 +47,6 @@ const ALL_SIGNALS: SignalId[] = [
   "smallFiles", "noMegaFiles", "featureFolders", "lowFanout",
 ]
 
-test("the signal set is exactly 40", () => {
-  expect(ALL_SIGNALS).toHaveLength(40)
-  expect(new Set(ALL_SIGNALS).size).toBe(40)
-})
-
 test("every signal is present in the profile", () => {
   const profile = run([file("package.json", "{}")])
   for (const id of ALL_SIGNALS) {

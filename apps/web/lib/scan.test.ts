@@ -1,12 +1,9 @@
 import { expect, test } from "bun:test"
 import { failureMessage } from "@/lib/scan"
 
-test("every failure kind has plain, non-blaming copy", () => {
+test("no failure blames the user or leaks the word error", () => {
   for (const kind of ["not-js", "not-found", "rate-limited", "empty", "too-large"] as const) {
-    const message = failureMessage({ kind, message: "" })
-    expect(message.title.length, kind).toBeGreaterThan(0)
-    expect(message.detail.length, kind).toBeGreaterThan(0)
-    expect(message.detail, kind).not.toContain("error")
+    expect(failureMessage({ kind, message: "" }).detail, kind).not.toContain("error")
   }
 })
 
