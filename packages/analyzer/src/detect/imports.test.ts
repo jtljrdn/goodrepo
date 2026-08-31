@@ -22,8 +22,14 @@ test("fails when validation libraries are mixed", () => {
   expect(result.validationPatterns.sort()).toEqual(["joi", "yup", "zod"])
 })
 
-test("no validation library at all is not measured as a pass", () => {
-  expect(detectImports(facts([["a.ts", ["react"]]])).has.singleValidationLib).toBe(false)
+test("no validation library at all is not applicable, not a failure", () => {
+  expect(detectImports(facts([["a.ts", ["react"]]])).has.singleValidationLib).toBeNull()
+})
+
+test("a repository with no UI layer is not scored on singleDataLayer", () => {
+  // honojs/hono has zero UI files, so the data-layer boundary does not apply.
+  // It previously scored as a failure, costing real points for nothing.
+  expect(detectImports(facts([["src/hono.ts", ["./compose"]]])).has.singleDataLayer).toBeNull()
 })
 
 test("fails singleDataLayer when UI files import the database directly", () => {

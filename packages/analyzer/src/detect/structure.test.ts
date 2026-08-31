@@ -44,6 +44,13 @@ test("fails generatedExcluded when build output is committed", () => {
   expect(detectStructure(facts(["src/a.ts"])).has.generatedExcluded).toBe(true)
 })
 
+test("a build/ directory holding source is not treated as build output", () => {
+  // honojs/hono keeps build scripts in build/. Treating that name as generated
+  // both failed the signal and hid five source files from analysis.
+  expect(detectStructure(facts(["src/a.ts", "build/build.ts"])).has.generatedExcluded).toBe(true)
+  expect(detectStructure(facts(["src/a.ts", "out/page.ts"])).has.generatedExcluded).toBe(true)
+})
+
 test("featureFolders looks only at the source root's immediate children", () => {
   const byDomain = detectStructure(
     facts(["src/auth/a.ts", "src/billing/b.ts", "src/dashboard/c.ts", "src/components/d.ts", "src/lib/e.ts"])

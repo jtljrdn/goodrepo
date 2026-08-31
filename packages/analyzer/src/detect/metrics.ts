@@ -1,7 +1,7 @@
 import { passes, THRESHOLDS } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
-type Casing = "kebab" | "camel" | "pascal" | "snake" | "lower"
+type Casing = "kebab" | "camel" | "pascal" | "snake"
 
 function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
   return { value, threshold: THRESHOLDS[key].threshold, unit: THRESHOLDS[key].unit }
@@ -15,14 +15,15 @@ function median(values: number[]): number {
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }
 
+// A single-word lowercase name and a hyphenated one are the SAME convention.
+// Splitting them punishes repositories that are perfectly consistent.
 function casingOf(path: string): Casing {
   const base = path.slice(path.lastIndexOf("/") + 1)
   const name = base.split(".")[0] ?? ""
-  if (name.includes("-")) return "kebab"
-  if (name.includes("_")) return "snake"
   if (/^[A-Z]/.test(name)) return "pascal"
+  if (name.includes("_")) return "snake"
   if (/[A-Z]/.test(name)) return "camel"
-  return "lower"
+  return "kebab"
 }
 
 export function detectMetrics(facts: RawFacts) {
@@ -51,9 +52,9 @@ export function detectMetrics(facts: RawFacts) {
     linesOfCode: lines.reduce((total, n) => total + n, 0),
     measurements,
     has: {
-      smallFiles: hasFiles && passes("medianFileLoc", medianFileLoc),
-      noMegaFiles: hasFiles && passes("largestFileLoc", largestFileLoc),
-      consistentNaming: hasFiles && passes("namingConsistency", namingShare),
+      smallFiles: hasFiles ? passes("medianFileLoc", medianFileLoc) : null,
+      noMegaFiles: hasFiles ? passes("largestFileLoc", largestFileLoc) : null,
+      consistentNaming: hasFiles ? passes("namingConsistency", namingShare) : null,
     },
   }
 }

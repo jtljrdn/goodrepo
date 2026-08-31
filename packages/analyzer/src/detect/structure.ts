@@ -93,13 +93,13 @@ export function detectStructure(facts: RawFacts) {
     directories: new Set(facts.paths.map(dirOf).filter(Boolean)).size,
     measurements,
     has: {
-      predictableRoot: codePaths.length > 0 && passes("rootConcentration", rootShare),
-      shallowTree: passes("maxDepth", maxDepth),
-      colocatedTests: testPaths.length > 0 && passes("testColocation", colocationShare),
+      predictableRoot: codePaths.length > 0 ? passes("rootConcentration", rootShare) : null,
+      shallowTree: facts.paths.length > 0 ? passes("maxDepth", maxDepth) : null,
+      colocatedTests: testPaths.length > 0 ? passes("testColocation", colocationShare) : null,
       generatedExcluded: !facts.paths.some((p) =>
         GENERATED_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`) || p.includes(`/${dir}/`))
       ),
-      featureFolders: children.size > 0 && passes("typeNamedFolders", typeShare),
+      featureFolders: children.size > 0 ? passes("typeNamedFolders", typeShare) : null,
     },
   }
 }

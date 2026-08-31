@@ -76,9 +76,12 @@ export function detectImports(facts: RawFacts) {
     apiRoutes: facts.paths.filter((p) => ROUTE_PATTERNS.some((re) => re.test(p))).length,
     measurements,
     has: {
-      singleValidationLib: validationTotal > 0 && passes("validationDominance", validationShare),
-      singleDataLayer: uiFiles.length > 0 && passes("directDbInUi", dbShare),
-      lowFanout: facts.codeFiles.length > 0 && passes("medianFanout", medianFanout),
+      // A repository that does no validation is not inconsistent, and one with no
+      // UI layer has no data-layer boundary to violate. Both are not-applicable,
+      // which is null, never a failed point.
+      singleValidationLib: validationTotal > 0 ? passes("validationDominance", validationShare) : null,
+      singleDataLayer: uiFiles.length > 0 ? passes("directDbInUi", dbShare) : null,
+      lowFanout: facts.codeFiles.length > 0 ? passes("medianFanout", medianFanout) : null,
     },
   }
 }
