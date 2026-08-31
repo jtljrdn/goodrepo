@@ -86,12 +86,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
         <ReportHeadline profile={profile} overall={overall} />
 
         <div className="border-border/60 flex flex-wrap items-center gap-x-6 gap-y-2 border-t py-3 text-xs">
-          <span className="text-muted-foreground">
-            Fast scan · 0 model tokens · cached as{" "}
-            <span className="text-foreground">
-              github:{profile.owner}/{profile.repo}@{profile.commitSha}
-            </span>
-          </span>
+          <span className="text-muted-foreground">Fast scan · 0 model tokens</span>
           <span className="text-muted-foreground ml-auto">
             {measured} signals checked
             {deferred > 0 ? ` · ${deferred} need a deep scan` : ""}
@@ -142,10 +137,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
           )}
         </Section>
 
-        <Section
-          title="Repository profile"
-          hint="The compact structure sent to the model on a deep scan"
-        >
+        <Section title="Repository profile">
           <ProfileBlock profile={profile} />
         </Section>
 

@@ -307,8 +307,16 @@ export function ProfileBlock({ profile }: { profile: RepoProfile }) {
   }
 
   return (
-    <pre className="border-border/60 bg-muted/40 overflow-x-auto border p-4 text-[11px] leading-relaxed">
-      {JSON.stringify(compact, null, 2)}
-    </pre>
+    <details className="border-border/60 group border-t">
+      <summary className="hover:bg-muted/50 flex cursor-pointer list-none items-center gap-4 py-3 transition-colors">
+        <span className="text-muted-foreground w-4 text-xs group-open:rotate-90">›</span>
+        <span className="text-muted-foreground flex-1 font-sans text-xs">
+          The compact structure a deep scan would send to the model
+        </span>
+      </summary>
+      <pre className="border-border/60 bg-muted/40 mb-2 overflow-x-auto border p-4 text-[11px] leading-relaxed">
+        {JSON.stringify(compact, null, 2)}
+      </pre>
+    </details>
   )
 }
