@@ -2,13 +2,7 @@ import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
 import { CATEGORIES, type CategoryKey } from "@/lib/score"
-
-const EXAMPLES = [
-  "vercel/next.js",
-  "shadcn-ui/ui",
-  "drizzle-team/drizzle-orm",
-  "honojs/hono",
-]
+import { EXAMPLES } from "@/lib/examples"
 
 const SIGNAL_COUNT = CATEGORIES.reduce((n, c) => n + c.signals.length, 0)
 
@@ -98,11 +92,11 @@ export default function Page() {
             <span className="text-muted-foreground/60 mr-1">or try</span>
             {EXAMPLES.map((example) => (
               <Link
-                key={example}
-                href={`/${example}`}
+                key={example.slug}
+                href={`/${example.slug}`}
                 className="border-border/60 text-muted-foreground hover:text-foreground hover:border-border border px-2 py-1 transition-colors"
               >
-                {example}
+                {example.slug}
               </Link>
             ))}
           </div>

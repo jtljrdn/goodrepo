@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
@@ -25,7 +26,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          {children}
+          <Suspense>{children}</Suspense>
           <Footer />
         </ThemeProvider>
       </body>

@@ -1,12 +1,11 @@
+import { cacheLife } from "next/cache"
 import Link from "next/link"
 
 const REPO = "jtljrdn/goodrepo"
 
 async function starCount(): Promise<number | null> {
   try {
-    const res = await fetch(`https://api.github.com/repos/${REPO}`, {
-      next: { revalidate: 3600 },
-    })
+    const res = await fetch(`https://api.github.com/repos/${REPO}`)
     if (!res.ok) return null
     const data = (await res.json()) as { stargazers_count?: number }
     return data.stargazers_count ?? null
@@ -15,7 +14,12 @@ async function starCount(): Promise<number | null> {
   }
 }
 
+// The star count and the copyright year both refresh hourly. Without this the
+// footer made an uncached GitHub call on every single page render.
 export async function Footer() {
+  "use cache"
+  cacheLife("hours")
+
   const stars = await starCount()
 
   return (

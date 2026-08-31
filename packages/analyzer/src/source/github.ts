@@ -86,26 +86,35 @@ export type RepoTree = {
   truncated: boolean
 }
 
-export async function fetchTree(
+export async function fetchHeadSha(
   owner: string,
   repo: string,
   ref: string,
   token?: string
-): Promise<RepoTree | ScanFailure> {
-  const head = await fetch(`${API}/repos/${owner}/${repo}/commits/${ref}`, {
+): Promise<string | ScanFailure> {
+  const res = await fetch(`${API}/repos/${owner}/${repo}/commits/${ref}`, {
     headers: headers(token),
   })
-  const headFailure = failureFor(head.status, head.headers.get("x-ratelimit-remaining"))
-  if (headFailure) return headFailure
-  if (!head.ok) return { kind: "not-found", message: "Could not read the default branch." }
+  const failure = failureFor(res.status, res.headers.get("x-ratelimit-remaining"))
+  if (failure) return failure
+  if (!res.ok) return { kind: "not-found", message: "Could not read the default branch." }
 
-  const headBody: unknown = await head.json()
-  const sha =
-    typeof headBody === "object" && headBody !== null &&
-    typeof (headBody as Record<string, unknown>).sha === "string"
-      ? ((headBody as Record<string, unknown>).sha as string)
-      : ref
+  const body: unknown = await res.json()
+  if (
+    typeof body === "object" && body !== null &&
+    typeof (body as Record<string, unknown>).sha === "string"
+  ) {
+    return (body as Record<string, unknown>).sha as string
+  }
+  return { kind: "not-found", message: "Could not read the default branch." }
+}
 
+export async function fetchTree(
+  owner: string,
+  repo: string,
+  sha: string,
+  token?: string
+): Promise<RepoTree | ScanFailure> {
   const res = await fetch(`${API}/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`, {
     headers: headers(token),
   })

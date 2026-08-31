@@ -16,6 +16,7 @@ export {
   classifyRepo,
   fetchBlobs,
   fetchBlobsRest,
+  fetchHeadSha,
   fetchRepoMeta,
   fetchTree,
   isFailure,
