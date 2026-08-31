@@ -1,4 +1,4 @@
-import type { RepoProfile, SignalId } from "@/lib/profile"
+import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 
 export type Signal = {
   id: SignalId
@@ -54,7 +54,6 @@ export const CATEGORIES: CategoryDef[] = [
         (p) => `Directory tree stays shallow (max depth ${p.maxDirectoryDepth})`,
         (p) => `Directory tree is deep (max depth ${p.maxDirectoryDepth})`
       ),
-      s("namedBoundaries", 15, "Folders are named after domains, not types", "Large catch-all folders (utils, helpers, common) hold unrelated code"),
       s("colocatedTests", 15, "Tests sit next to the code they cover", "Tests live far from the code they cover"),
       s("generatedExcluded", 15, "Generated output is ignored and excluded", "Generated output is committed alongside source"),
     ],
@@ -129,39 +128,67 @@ export const CATEGORIES: CategoryDef[] = [
     signals: [
       s("smallFiles", 20, (p) => `Median file is ${p.medianFileLoc} lines`, (p) => `Median file is ${p.medianFileLoc} lines — most edits pull in a lot of context`),
       s("noMegaFiles", 15, (p) => `Largest file is ${p.largestFileLoc} lines`, (p) => `Largest file is ${p.largestFileLoc} lines`),
-      s("shallowTree", 15, "Paths are short enough to guess", "Deep paths make files hard to guess"),
-      s("featureFolders", 15, "Related code is grouped by feature", "Related code is scattered across layers"),
+      s(
+        "featureFolders",
+        25,
+        "Source folders are named after features, not file types",
+        "Source folders are named after file types (components, hooks, utils), so one change is spread across them"
+      ),
       s("lowFanout", 20, "Common changes stay inside one module", "Common changes touch many modules at once"),
-      s("colocatedTests", 15, "Test for a file is one directory away", "Finding the test for a file requires a search"),
     ],
   },
 ]
 
-export type ScoredSignal = { id: SignalId; points: number; earned: boolean; text: string }
+export type SignalStatus = "pass" | "fail" | "not-measured"
+
+export type ScoredSignal = {
+  id: SignalId
+  points: number
+  status: SignalStatus
+  text: string
+  measurement?: Measurement
+}
+
 export type ScoredCategory = {
   key: CategoryKey
   name: string
   question: string
-  score: number
+  score: number | null
   earnedPoints: number
   totalPoints: number
   signals: ScoredSignal[]
 }
 
 export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory {
-  const signals = def.signals.map((sig) => ({
-    id: sig.id,
-    points: sig.points,
-    earned: p.has[sig.id],
-    text: p.has[sig.id] ? sig.label(p) : sig.missing(p),
-  }))
-  const totalPoints = signals.reduce((n, sig) => n + sig.points, 0)
-  const earnedPoints = signals.reduce((n, sig) => n + (sig.earned ? sig.points : 0), 0)
+  const signals: ScoredSignal[] = def.signals.map((sig) => {
+    const value = p.has[sig.id]
+    if (value === null || value === undefined) {
+      return {
+        id: sig.id,
+        points: sig.points,
+        status: "not-measured",
+        text: "Not measured in a fast scan",
+        measurement: p.measurements[sig.id],
+      }
+    }
+    return {
+      id: sig.id,
+      points: sig.points,
+      status: value ? "pass" : "fail",
+      text: value ? sig.label(p) : sig.missing(p),
+      measurement: p.measurements[sig.id],
+    }
+  })
+
+  const measured = signals.filter((sig) => sig.status !== "not-measured")
+  const totalPoints = measured.reduce((n, sig) => n + sig.points, 0)
+  const earnedPoints = measured.reduce((n, sig) => n + (sig.status === "pass" ? sig.points : 0), 0)
+
   return {
     key: def.key,
     name: def.name,
     question: def.question,
-    score: Math.round((earnedPoints / totalPoints) * 100),
+    score: totalPoints === 0 ? null : Math.round((earnedPoints / totalPoints) * 100),
     earnedPoints,
     totalPoints,
     signals,
@@ -170,9 +197,11 @@ export function scoreCategory(def: CategoryDef, p: RepoProfile): ScoredCategory 
 
 export function scoreRepo(p: RepoProfile) {
   const categories = CATEGORIES.map((def) => scoreCategory(def, p))
-  const overall = Math.round(
-    categories.reduce((n, c) => n + c.score, 0) / categories.length
+  const scored = categories.filter(
+    (c): c is ScoredCategory & { score: number } => c.score !== null
   )
+  const overall =
+    scored.length === 0 ? null : Math.round(scored.reduce((n, c) => n + c.score, 0) / scored.length)
   return { overall, categories }
 }
 

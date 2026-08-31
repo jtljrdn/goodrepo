@@ -201,7 +201,9 @@ export function recommend(p: RepoProfile, categories: ScoredCategory[]): Recomme
 
   for (const category of categories) {
     for (const signal of category.signals) {
-      if (signal.earned || seen.has(signal.id)) continue
+      // Only failed signals earn a recommendation. A not-measured signal has no
+      // finding to act on, so proposing a fix for it would claim work that never ran.
+      if (signal.status !== "fail" || seen.has(signal.id)) continue
       const copy = COPY[signal.id]
       if (!copy) continue
       seen.add(signal.id)
