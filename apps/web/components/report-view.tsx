@@ -11,6 +11,7 @@ import {
   Section,
 } from "@/components/report"
 import type { RepoProfile, SignalVerdict } from "@/lib/profile"
+import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { recommend } from "@/lib/recommendations"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
 
@@ -186,7 +187,13 @@ export function ReportView({
 
       <Section
         title="Go deeper"
-        hint={ran ? "Deep scan ran on this report" : "Not run on this scan"}
+        hint={
+          ran
+            ? "Deep scan ran on this report"
+            : DEEP_SCAN_ENABLED
+              ? "Not run on this scan"
+              : "Neither runs from this page yet"
+        }
       >
         <div className="grid gap-px sm:grid-cols-2">
           <div className="border border-border/60 p-5">
@@ -196,7 +203,11 @@ export function ReportView({
                 ? "A throwaway sandbox cloned this commit and a model read the code behind the signals the fast scan could not settle. The answers above are cached against this commit, so reloading costs nothing."
                 : `Clones this commit into a throwaway sandbox and lets a model read the code behind the ${pending > 0 ? pending : "few"} signals counting alone cannot settle. Takes about a minute.`}
             </p>
-            {ran ? (
+            {!DEEP_SCAN_ENABLED ? (
+              <Button variant="outline" size="sm" className="mt-4" disabled>
+                Not available yet
+              </Button>
+            ) : ran ? (
               <Link href={`/${profile.owner}/${profile.repo}`}>
                 <Button variant="outline" size="sm" className="mt-4">
                   Back to the fast scan

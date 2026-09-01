@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { runDeepScan } from "@/lib/deep"
+import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { failureMessage } from "@/lib/scan"
 
 export const maxDuration = 300
@@ -18,6 +20,9 @@ export async function generateMetadata(
 export default async function DeepReportPage(
   props: PageProps<"/[owner]/[repo]/deep">
 ) {
+  // Guessing the URL must not be a way to spend money on a scan nobody paid for.
+  if (!DEEP_SCAN_ENABLED) notFound()
+
   const { owner, repo } = await props.params
   const result = await runDeepScan(owner, repo)
 

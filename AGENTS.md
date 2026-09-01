@@ -23,8 +23,15 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 The deep scan is a separate route on purpose. The free scan must keep costing nothing and
 staying fast, so nothing on `/[owner]/[repo]` may reach the model or the sandbox. A deep run
 that cannot finish throws rather than returning, so the failure is not cached and the page
-degrades to the static report. The deep route is not yet gated behind an account, so it is
-`noindex` and its link is `prefetch={false}`.
+degrades to the static report.
+
+**Deep scans are off by default.** `DEEP_SCAN_ENABLED` in `lib/flags.ts` reads
+`GOODREPO_DEEP_SCAN`, and while it is false the route 404s and the button does not render.
+Nothing an anonymous visitor can reach may start a scan that pays a model, and accounts and
+billing do not exist yet. Set `GOODREPO_DEEP_SCAN=1` in the root `.env.local` to work on it,
+and delete the flag once accounts gate the route. The route is also `noindex` and its link is
+`prefetch={false}`. Note that the disabled route answers `200` with the 404 page rather than a
+`404` status, because the partial-prerender shell is flushed before `notFound()` runs.
 
 Both scans cache by commit through `cachedByCommit` in `lib/cache.ts`, which wraps
 `unstable_cache`. **Do not replace it with `use cache`.** Next composes its cache key from the
