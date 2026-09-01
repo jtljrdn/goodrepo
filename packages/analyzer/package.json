@@ -20,5 +20,10 @@
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
     "./thresholds": "./src/thresholds.ts"
+  },
+  "dependencies": {
+    "@vercel/sandbox": "^3.2.1",
+    "ai": "^7.0.87",
+    "zod": "^4.5.4"
   }
 }

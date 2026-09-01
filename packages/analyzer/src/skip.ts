@@ -53,6 +53,12 @@ export function isCodeFile(path: string): boolean {
   return CODE_EXT.has(ext(path))
 }
 
+export function isDocFile(path: string): boolean {
+  if (isSkippedPath(path)) return false
+  const name = base(path)
+  return name.endsWith(".md") && KEPT_FILES.has(name)
+}
+
 export function isTestFile(path: string): boolean {
   if (!CODE_EXT.has(ext(path))) return false
   if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(base(path))) return true

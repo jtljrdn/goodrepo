@@ -19,7 +19,10 @@
         "!.next/cache/**"
       ],
       "env": [
+        "AI_GATEWAY_API_KEY",
         "GITHUB_TOKEN",
+        "GOODREPO_MODEL",
+        "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
@@ -28,7 +31,10 @@
         "^lint"
       ],
       "env": [
+        "AI_GATEWAY_API_KEY",
         "GITHUB_TOKEN",
+        "GOODREPO_MODEL",
+        "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
@@ -51,7 +57,10 @@
       "cache": false,
       "persistent": true,
       "env": [
+        "AI_GATEWAY_API_KEY",
         "GITHUB_TOKEN",
+        "GOODREPO_MODEL",
+        "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     }

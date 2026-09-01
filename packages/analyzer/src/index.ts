@@ -10,7 +10,19 @@ import type { Measurement, RawFacts, RepoMeta, RepoProfile, SignalId, TreeEntry 
 
 export * from "./types"
 export { CAPS, passes, THRESHOLDS } from "./thresholds"
-export { isCodeFile, isKeptFile, isTestFile } from "./skip"
+export { isCodeFile, isDocFile, isKeptFile, isTestFile } from "./skip"
+export { CheckoutError, parseLsTree, withCheckout } from "./sandbox"
+export { buildDocPrompt, docPaths, extractClaims } from "./deep/claims"
+export type { Claim, ClaimSet } from "./deep/claims"
+export { deepReview, shouldLand } from "./deep/review"
+export { AGENT_SIGNALS, repoBrief, resolveSignals, unresolvedSignals } from "./deep/signals"
+export { applyVerdicts, deepScan } from "./deep/scan"
+export type { DeepScan } from "./deep/scan"
+export type { SignalResolution, SignalVerdict } from "./deep/signals"
+export type { DeepFinding, DeepReview } from "./deep/review"
+export { checkFinding, directoriesOf, normalize, verifyFindings } from "./deep/verify"
+export type { RejectedFinding, Verification } from "./deep/verify"
+export type { Checkout, CheckoutTarget } from "./sandbox"
 export { chooseConfigFiles, chooseSample } from "./collect"
 export {
   classifyRepo,

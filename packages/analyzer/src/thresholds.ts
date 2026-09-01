@@ -18,6 +18,17 @@ export const CAPS = {
   importSample: 200,
   configFiles: 40,
   perFileBytes: 2 * 1024 * 1024,
+  sandboxVcpus: 2,
+  sandboxTimeoutMs: 5 * 60_000,
+  deepMaxSteps: 40,
+  deepReadBytes: 16_000,
+  deepGrepMatches: 25,
+  deepMaxFindings: 12,
+  deepMaxClaims: 40,
+  deepLandingSteps: 5,
+  deepStepsPerSignal: 8,
+  deepMaxPatterns: 6,
+  deepDocBytes: 12_000,
 } as const
 
 export function passes(key: ThresholdKey, value: number): boolean {
