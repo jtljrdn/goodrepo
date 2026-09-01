@@ -1,3 +1,4 @@
+import { AGENT_SIGNALS } from "@workspace/analyzer"
 import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 
 export type Signal = {
@@ -370,10 +371,26 @@ export const CATEGORIES: CategoryDef[] = [
 
 export type SignalStatus = "pass" | "fail" | "not-measured"
 
-const DEEP_SCAN_ONLY = new Set<SignalId>([
-  "consistentRouteShape",
-  "consistentErrors",
-])
+const EMPTY: ReadonlySet<SignalId> = new Set()
+
+/**
+ * The signals only a deep scan can settle. Taken from the analyzer's own registry so the two
+ * cannot drift: a signal added to or removed from the agent's question set changes this set
+ * with it.
+ */
+export const DEEP_SCAN_ONLY: ReadonlySet<SignalId> = new Set(
+  Object.keys(AGENT_SIGNALS) as SignalId[]
+)
+
+const SUBJECTS = new Map<SignalId, string>(
+  CATEGORIES.flatMap((category) =>
+    category.signals.map((signal) => [signal.id, signal.subject] as const)
+  )
+)
+
+export function signalSubject(id: SignalId): string {
+  return SUBJECTS.get(id) ?? id
+}
 
 export type ScoredSignal = {
   id: SignalId
@@ -395,14 +412,19 @@ export type ScoredCategory = {
 
 export function scoreCategory(
   def: CategoryDef,
-  p: RepoProfile
+  p: RepoProfile,
+  answered: ReadonlySet<SignalId> = EMPTY
 ): ScoredCategory {
   const signals: ScoredSignal[] = def.signals.map((sig) => {
     const value = p.has[sig.id]
     if (value === null || value === undefined) {
-      const reason = DEEP_SCAN_ONLY.has(sig.id)
-        ? "needs a deep scan"
-        : "does not apply to this repository"
+      // A deep scan that looked and found nothing of the kind is a different answer from one
+      // that has not run yet, even though both leave the signal unscored.
+      const reason = answered.has(sig.id)
+        ? "nothing of this kind in this repository"
+        : DEEP_SCAN_ONLY.has(sig.id)
+          ? "needs a deep scan"
+          : "does not apply to this repository"
       return {
         id: sig.id,
         points: sig.points,
@@ -438,8 +460,12 @@ export function scoreCategory(
   }
 }
 
-export function scoreRepo(p: RepoProfile) {
-  const categories = CATEGORIES.map((def) => scoreCategory(def, p))
+/**
+ * `answered` names the signals a deep scan reported on. It changes nothing about the arithmetic
+ * and only sharpens the wording for the ones it reported as not applicable.
+ */
+export function scoreRepo(p: RepoProfile, answered: ReadonlySet<SignalId> = EMPTY) {
+  const categories = CATEGORIES.map((def) => scoreCategory(def, p, answered))
   const scored = categories.filter(
     (c): c is ScoredCategory & { score: number } => c.score !== null
   )

@@ -62,7 +62,7 @@ export function failureMessage(failure: ScanFailure): {
   }
 }
 
-async function scanAtSha(
+export async function scanAtSha(
   owner: string,
   repo: string,
   sha: string
@@ -108,14 +108,21 @@ async function scanAtSha(
   return { ok: true, profile, overall, categories }
 }
 
+export async function resolveSha(
+  owner: string,
+  repo: string
+): Promise<string | ScanFailure> {
+  return (
+    pinnedSha(owner, repo) ??
+    (await fetchHeadSha(owner, repo, "HEAD", process.env.GITHUB_TOKEN))
+  )
+}
+
 export async function runScan(
   owner: string,
   repo: string
 ): Promise<ScanResult> {
-  const pinned = pinnedSha(owner, repo)
-  if (pinned) return scanAtSha(owner, repo, pinned)
-
-  const sha = await fetchHeadSha(owner, repo, "HEAD", process.env.GITHUB_TOKEN)
+  const sha = await resolveSha(owner, repo)
   if (isFailure(sha)) return { ok: false, failure: sha }
 
   return scanAtSha(owner, repo, sha)

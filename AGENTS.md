@@ -10,7 +10,7 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 
 ### Entry points
 
-- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders a report. There are no API routes; scanning happens in server components.
+- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report and `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in. There are no API routes; scanning happens in server components.
 - `packages/analyzer` — the scan engine. `src/index.ts` exports `analyze()` plus the GitHub fetch helpers; `src/detect/*` holds one deterministic detector per signal family; `src/source/github.ts` is the only code that talks to the GitHub API.
 - `packages/ui` — shared React components, Tailwind styles and the design tokens in `src/styles/globals.css`.
 - `packages/eslint-config`, `packages/typescript-config` — shared config only, no runtime code.
@@ -18,7 +18,14 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 ### Where logic lives
 
 - Repository facts and signal measurement: `packages/analyzer/src`. Anything that inspects a repo belongs here, not in the web app.
-- Scoring and presentation: `apps/web/lib`. `score.ts` turns measurements into category scores, `recommendations.ts` turns failed signals into advice, `scan.ts` orchestrates fetch → analyze → score.
+- Scoring and presentation: `apps/web/lib`. `score.ts` turns measurements into category scores, `recommendations.ts` turns failed signals into advice, `scan.ts` orchestrates fetch → analyze → score, and `deep.ts` runs the sandboxed model pass on top of a finished static scan and rescores.
+
+The deep scan is a separate route on purpose. The free scan must keep costing nothing and
+staying fast, so nothing on `/[owner]/[repo]` may reach the model or the sandbox. Both routes
+cache by commit SHA with `"use cache: remote"`; a deep run that cannot finish throws rather
+than returning so the failure is not cached, and the page degrades to the static report.
+The deep route is not yet gated behind an account, so it is `noindex` and its link is
+`prefetch={false}`.
 - Point values and pass/fail cutoffs live in `packages/analyzer/src/thresholds.ts`. Change them there, never inline at a call site.
 
 ### Dependency direction

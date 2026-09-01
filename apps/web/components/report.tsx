@@ -1,6 +1,11 @@
-import type { Measurement, RepoProfile } from "@/lib/profile"
-import type { ScoredCategory } from "@/lib/score"
-import { band, formatBytes } from "@/lib/score"
+import type {
+  Measurement,
+  RepoProfile,
+  SignalId,
+  SignalVerdict,
+} from "@/lib/profile"
+import type { ScoredCategory, SignalStatus } from "@/lib/score"
+import { band, formatBytes, signalSubject } from "@/lib/score"
 import type { Recommendation } from "@/lib/recommendations"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -348,5 +353,86 @@ export function ProfileBlock({ profile }: { profile: RepoProfile }) {
         {JSON.stringify(compact, null, 2)}
       </pre>
     </details>
+  )
+}
+
+const REACH_LABEL = {
+  most: "most of the relevant code",
+  some: "some of the relevant code",
+  few: "a few places",
+} as const
+
+function blobUrl(profile: RepoProfile, path: string): string {
+  return `https://github.com/${profile.owner}/${profile.repo}/blob/${profile.commitSha}/${path}`
+}
+
+export function DeepVerdicts({
+  verdicts,
+  profile,
+}: {
+  verdicts: SignalVerdict[]
+  profile: RepoProfile
+}) {
+  return (
+    <ul className="border-t border-border/60">
+      {verdicts.map((verdict) => {
+        const value = profile.has[verdict.signal as SignalId]
+        const status: SignalStatus =
+          value === null || value === undefined
+            ? "not-measured"
+            : value
+              ? "pass"
+              : "fail"
+
+        return (
+          <li
+            key={verdict.signal}
+            className="flex items-start gap-2.5 border-b border-border/60 py-5 last:border-b-0"
+          >
+            <span className={cn("mt-0.5 w-3 shrink-0 text-xs", SIGNAL_TONE[status])}>
+              {SIGNAL_MARK[status]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <h3 className="text-sm font-medium">
+                  {signalSubject(verdict.signal as SignalId)}
+                </h3>
+                <span className="text-[10px] text-muted-foreground/60">
+                  {verdict.applicable
+                    ? `${verdict.patterns.length} pattern${verdict.patterns.length === 1 ? "" : "s"} observed`
+                    : "nothing of this kind in this repository"}
+                </span>
+              </div>
+              <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
+                {verdict.reason}
+              </p>
+              {verdict.patterns.length > 0 ? (
+                <ul className="mt-3 divide-y divide-border/60 border border-border/60 bg-muted/40">
+                  {verdict.patterns.map((pattern) => (
+                    <li
+                      key={`${pattern.pattern}:${pattern.path}`}
+                      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-xs"
+                    >
+                      <span>{pattern.pattern}</span>
+                      <span className="text-muted-foreground/60">
+                        {REACH_LABEL[pattern.reach]}
+                      </span>
+                      <a
+                        href={blobUrl(profile, pattern.path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-auto max-w-full truncate text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        {pattern.path}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
