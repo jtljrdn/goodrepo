@@ -1,5 +1,6 @@
 import { Suspense } from "react"
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google"
+import type { Metadata } from "next"
+import { Geist, JetBrains_Mono } from "next/font/google"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -15,6 +16,32 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 })
+
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : "http://localhost:3000"
+
+const title = "GoodRepo — agent-readiness score for any GitHub repo"
+const description =
+  "GoodRepo scores public GitHub repositories for AI agent readiness from measurable, deterministic repository signals."
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: { default: title, template: "%s · GoodRepo" },
+  description,
+  openGraph: {
+    type: "website",
+    siteName: "GoodRepo",
+    url: "/",
+    title,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
+}
 
 export default function RootLayout({
   children,

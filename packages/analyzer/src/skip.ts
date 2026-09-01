@@ -16,7 +16,7 @@ const LOCKFILES = new Set([
 ])
 
 const KEPT_FILES = new Set([
-  "package.json", "tsconfig.json", "readme.md", "agents.md", "claude.md",
+  "package.json", "tsconfig.json", "readme.md", "agents.md", "claude.md", "contributing.md",
   ".env.example", ".env.sample", ".env.template", "dockerfile",
   "compose.yaml", "compose.yml", "docker-compose.yml", ".nvmrc", ".node-version",
 ])

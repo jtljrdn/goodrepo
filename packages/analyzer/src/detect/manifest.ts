@@ -31,10 +31,13 @@ export function readScripts(pkg: Record<string, unknown> | null): Record<string,
   return out
 }
 
-function hasScript(scripts: Record<string, string>, name: string, fallback?: RegExp): boolean {
-  if (typeof scripts[name] === "string") return true
+// Script names vary by repo: `typecheck`, `type-check`, `test:types`, `check-types`.
+// Match the name by pattern first, then fall back to what the command actually runs.
+function hasScript(scripts: Record<string, string>, name: RegExp, fallback?: RegExp): boolean {
+  const entries = Object.entries(scripts)
+  if (entries.some(([script]) => name.test(script))) return true
   if (!fallback) return false
-  return Object.values(scripts).some((command) => fallback.test(command))
+  return entries.some(([, command]) => fallback.test(command))
 }
 
 export function detectManifest(facts: RawFacts) {
@@ -61,10 +64,18 @@ export function detectManifest(facts: RawFacts) {
         enginesNode ||
         RUNTIME_FILES.some((name) => rootNames.has(name)) ||
         typeof pkg?.volta === "object",
-      buildScript: hasScript(scripts, "build"),
-      lintScript: hasScript(scripts, "lint"),
-      formatScript: hasScript(scripts, "format", /\bprettier\b|\bbiome format\b/),
-      typecheckScript: hasScript(scripts, "typecheck", /tsc\s+(-p\s+\S+\s+)?--noEmit/),
+      buildScript: hasScript(scripts, /^build([:-]|$)/),
+      lintScript: hasScript(scripts, /^lint([:-]|$)/),
+      formatScript: hasScript(
+        scripts,
+        /^(format|fmt|prettier)([:-]|$)/,
+        /\bprettier\b|\b(biome|dprint) (format|fmt)\b/
+      ),
+      typecheckScript: hasScript(
+        scripts,
+        /^((test|check|lint)[:-])?(typecheck|type-check|typescript|types?|tsc)$/,
+        /\b(vue-)?tsc\s+(-p\s+\S+\s+)?--noEmit/
+      ),
     },
   }
 }

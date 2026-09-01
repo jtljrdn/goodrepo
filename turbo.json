@@ -19,7 +19,8 @@
         "!.next/cache/**"
       ],
       "env": [
-        "GITHUB_TOKEN"
+        "GITHUB_TOKEN",
+        "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
     "lint": {
@@ -27,7 +28,8 @@
         "^lint"
       ],
       "env": [
-        "GITHUB_TOKEN"
+        "GITHUB_TOKEN",
+        "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
     "format": {
@@ -49,7 +51,8 @@
       "cache": false,
       "persistent": true,
       "env": [
-        "GITHUB_TOKEN"
+        "GITHUB_TOKEN",
+        "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     }
   }

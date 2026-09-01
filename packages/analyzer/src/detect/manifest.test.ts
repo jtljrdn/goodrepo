@@ -62,3 +62,28 @@ test("survives malformed package.json without throwing", () => {
   expect(result.has.buildScript).toBe(false)
   expect(result.packageManager).toBeNull()
 })
+
+test("recognises scripts named with a prefix or separator", () => {
+  const result = detectManifest(
+    facts(["package.json"], {
+      "package.json": pkg({
+        scripts: {
+          build: "turbo run build",
+          "lint:fix": "dprint fmt",
+          "test:types": "turbo run test:types",
+        },
+      }),
+    })
+  )
+  expect(result.has.buildScript).toBe(true)
+  expect(result.has.lintScript).toBe(true)
+  expect(result.has.formatScript).toBe(true)
+  expect(result.has.typecheckScript).toBe(true)
+})
+
+test("a script that merely mentions types is not a typecheck script", () => {
+  const result = detectManifest(
+    facts(["package.json"], { "package.json": pkg({ scripts: { "gen:types": "openapi-typescript" } }) })
+  )
+  expect(result.has.typecheckScript).toBe(false)
+})

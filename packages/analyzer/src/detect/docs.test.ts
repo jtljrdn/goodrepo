@@ -77,3 +77,25 @@ test("no README at all fails cleanly", () => {
   expect(result.readmeWords).toBe(0)
   expect(result.sections).toEqual([])
 })
+
+test("reads commands documented in CONTRIBUTING.md", () => {
+  const result = detectDocs(
+    facts({
+      "README.md": "# Drizzle\n\nan ORM",
+      "CONTRIBUTING.md": "## Running tests\n\n```bash\npnpm install && pnpm build\npnpm run dev\ncd x && pnpm test -t \"case\"\n```",
+    }),
+    "pnpm@10.6.3"
+  )
+  expect(result.has.docPackageManager).toBe(true)
+  expect(result.has.docTestCommand).toBe(true)
+  expect(result.has.docBuildCommand).toBe(true)
+  expect(result.has.singleTestDocumented).toBe(true)
+})
+
+test("CONTRIBUTING.md does not count toward the README word count", () => {
+  const result = detectDocs(
+    facts({ "README.md": "# T\n\nshort", "CONTRIBUTING.md": `# C\n\n${"word ".repeat(400)}` }),
+    null
+  )
+  expect(result.has.readmeDepth).toBe(false)
+})
