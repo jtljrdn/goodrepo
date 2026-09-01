@@ -21,11 +21,22 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 - Scoring and presentation: `apps/web/lib`. `score.ts` turns measurements into category scores, `recommendations.ts` turns failed signals into advice, `scan.ts` orchestrates fetch → analyze → score, and `deep.ts` runs the sandboxed model pass on top of a finished static scan and rescores.
 
 The deep scan is a separate route on purpose. The free scan must keep costing nothing and
-staying fast, so nothing on `/[owner]/[repo]` may reach the model or the sandbox. Both routes
-cache by commit SHA with `"use cache: remote"`; a deep run that cannot finish throws rather
-than returning so the failure is not cached, and the page degrades to the static report.
-The deep route is not yet gated behind an account, so it is `noindex` and its link is
-`prefetch={false}`.
+staying fast, so nothing on `/[owner]/[repo]` may reach the model or the sandbox. A deep run
+that cannot finish throws rather than returning, so the failure is not cached and the page
+degrades to the static report. The deep route is not yet gated behind an account, so it is
+`noindex` and its link is `prefetch={false}`.
+
+Both scans cache by commit through `cachedByCommit` in `lib/cache.ts`, which wraps
+`unstable_cache`. **Do not replace it with `use cache`.** Next composes its cache key from the
+build or deployment ID, so nothing cached that way survives a deploy, and the deep scan pays a
+model per miss. `unstable_cache` is what the Next reference itself names for data that must
+persist across deploys.
+
+The price of outliving the deployment is that invalidation becomes manual. Each cache carries a
+`version` string in `cachedByCommit(name, version, fn)`. **Bump it whenever the code that
+produced the cached values changes** — a detector, a threshold, the scoring, the agent's
+questions, or the cached shape — or old reports keep being served. Errors are never cached, so
+anything transient (a GitHub rate limit, a sandbox that died) must throw rather than return.
 - Point values and pass/fail cutoffs live in `packages/analyzer/src/thresholds.ts`. Change them there, never inline at a call site.
 
 ### Dependency direction

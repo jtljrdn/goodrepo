@@ -7,7 +7,7 @@ import {
   type SignalId,
   type SignalVerdict,
 } from "@workspace/analyzer"
-import { cacheLife } from "next/cache"
+import { cachedByCommit } from "@/lib/cache"
 import { resolveSha, scanAtSha } from "@/lib/scan"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
@@ -27,20 +27,14 @@ export type DeepReport =
     }
 
 /**
- * Cached per commit, because the same commit produces the same answers and the model is
- * essentially the whole cost of a deep scan.
- *
  * A run that could not finish throws rather than returning, so one bad sandbox or one
- * unreachable gateway is not written into the cache for the life of the commit.
+ * unreachable gateway is never written into the cache for the life of the commit.
  */
-async function deepAtSha(
+async function reason(
   owner: string,
   repo: string,
   sha: string
 ): Promise<DeepReport> {
-  "use cache: remote"
-  cacheLife("max")
-
   const base = await scanAtSha(owner, repo, sha)
   if (!base.ok) return base
 
@@ -63,6 +57,12 @@ async function deepAtSha(
     unfinished: null,
   }
 }
+
+/**
+ * Cached per commit, because the same commit produces the same answers and the model is
+ * essentially the whole cost of a deep scan.
+ */
+const deepAtSha = cachedByCommit("deep", "v1", reason)
 
 export async function runDeepScan(
   owner: string,

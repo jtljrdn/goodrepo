@@ -12,7 +12,7 @@ import {
   type RepoProfile,
   type ScanFailure,
 } from "@workspace/analyzer"
-import { cacheLife } from "next/cache"
+import { cachedByCommit, isTransient, TRANSIENT } from "@/lib/cache"
 import { pinnedSha } from "@/lib/examples"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
@@ -62,21 +62,25 @@ export function failureMessage(failure: ScanFailure): {
   }
 }
 
-export async function scanAtSha(
+// A rate limit is a fact about this minute, not about this commit, so it is thrown rather than
+// returned: a thrown error is never written to the cache.
+function reject(failure: ScanFailure): ScanResult {
+  if (failure.kind === "rate-limited") throw new Error(TRANSIENT)
+  return { ok: false, failure }
+}
+
+async function measure(
   owner: string,
   repo: string,
   sha: string
 ): Promise<ScanResult> {
-  "use cache: remote"
-  cacheLife("max")
-
   const token = process.env.GITHUB_TOKEN
 
   const meta = await fetchRepoMeta(owner, repo, token)
-  if (isFailure(meta)) return { ok: false, failure: meta }
+  if (isFailure(meta)) return reject(meta)
 
   const tree = await fetchTree(owner, repo, sha, token)
-  if (isFailure(tree)) return { ok: false, failure: tree }
+  if (isFailure(tree)) return reject(tree)
 
   const rejection = classifyRepo(tree.entries)
   if (rejection) return { ok: false, failure: rejection }
@@ -108,14 +112,44 @@ export async function scanAtSha(
   return { ok: true, profile, overall, categories }
 }
 
+const cachedMeasure = cachedByCommit("scan", "v1", measure)
+
+export async function scanAtSha(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<ScanResult> {
+  try {
+    return await cachedMeasure(owner, repo, sha)
+  } catch (error) {
+    if (isTransient(error)) {
+      return {
+        ok: false,
+        failure: {
+          kind: "rate-limited",
+          message: "GitHub rate limit reached. Try again shortly.",
+        },
+      }
+    }
+    throw error
+  }
+}
+
+const COMMIT_SHA = /^[0-9a-f]{40}$/
+
+/**
+ * Always a real commit. A pinned example may name a branch, and caching against a branch name
+ * would freeze that report for the life of the entry, so anything that is not already a full
+ * SHA is resolved through GitHub first.
+ */
 export async function resolveSha(
   owner: string,
   repo: string
 ): Promise<string | ScanFailure> {
-  return (
-    pinnedSha(owner, repo) ??
-    (await fetchHeadSha(owner, repo, "HEAD", process.env.GITHUB_TOKEN))
-  )
+  const pinned = pinnedSha(owner, repo)
+  if (pinned !== null && COMMIT_SHA.test(pinned)) return pinned
+
+  return fetchHeadSha(owner, repo, pinned ?? "HEAD", process.env.GITHUB_TOKEN)
 }
 
 export async function runScan(
