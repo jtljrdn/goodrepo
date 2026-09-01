@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
 import { Geist, JetBrains_Mono } from "next/font/google"
-
+import { Analytics } from "@vercel/analytics/next"
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Footer } from "@/components/footer"
@@ -63,6 +63,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Suspense>{children}</Suspense>
           <Footer />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
