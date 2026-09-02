@@ -2,16 +2,39 @@ import { passes, THRESHOLDS } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 import { readPackageJson } from "./manifest"
 
-const VALIDATION_LIBS = ["zod", "yup", "joi", "valibot", "superstruct", "ajv", "arktype"]
+const VALIDATION_LIBS = [
+  "zod",
+  "yup",
+  "joi",
+  "valibot",
+  "superstruct",
+  "ajv",
+  "arktype",
+]
 const DB_LIBS = [
-  "drizzle-orm", "@prisma/client", "prisma", "kysely", "mongoose", "pg", "mysql2", "postgres",
+  "drizzle-orm",
+  "@prisma/client",
+  "prisma",
+  "kysely",
+  "mongoose",
+  "pg",
+  "mysql2",
+  "postgres",
 ]
 const UI_SEGMENTS = new Set(["components", "app", "pages", "views", "screens"])
 
-const ROUTE_PATTERNS = [/\/route\.[cm]?[jt]s$/, /^pages\/api\//, /\/pages\/api\//]
+const ROUTE_PATTERNS = [
+  /\/route\.[cm]?[jt]s$/,
+  /^pages\/api\//,
+  /\/pages\/api\//,
+]
 
 function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return { value, threshold: THRESHOLDS[key].threshold, unit: THRESHOLDS[key].unit }
+  return {
+    value,
+    threshold: THRESHOLDS[key].threshold,
+    unit: THRESHOLDS[key].unit,
+  }
 }
 
 function median(values: number[]): number {
@@ -60,7 +83,10 @@ export function detectImports(facts: RawFacts) {
 
   const declared = declaredValidationLibs(facts)
   const validationShare = declared.length === 0 ? 0 : 1 / declared.length
-  measurements.singleValidationLib = measure("validationDominance", validationShare)
+  measurements.singleValidationLib = measure(
+    "validationDominance",
+    validationShare
+  )
 
   const uiFiles = sampled.filter((f) => isUiFile(f.path))
   const uiWithDb = uiFiles.filter((f) =>
@@ -72,7 +98,9 @@ export function detectImports(facts: RawFacts) {
   const fanouts = sampled.map((file) => {
     const dirs = new Set<string>()
     for (const specifier of file.imports) {
-      dirs.add(specifier.startsWith(".") ? dirOf(specifier) : rootPackage(specifier))
+      dirs.add(
+        specifier.startsWith(".") ? dirOf(specifier) : rootPackage(specifier)
+      )
     }
     return dirs.size
   })
@@ -81,12 +109,16 @@ export function detectImports(facts: RawFacts) {
 
   return {
     validationPatterns: declared,
-    apiRoutes: facts.paths.filter((p) => ROUTE_PATTERNS.some((re) => re.test(p))).length,
+    apiRoutes: facts.paths.filter((p) =>
+      ROUTE_PATTERNS.some((re) => re.test(p))
+    ).length,
     measurements,
     has: {
       singleValidationLib: declared.length > 0 ? declared.length === 1 : null,
-      singleDataLayer: uiFiles.length > 0 ? passes("directDbInUi", dbShare) : null,
-      lowFanout: sampled.length > 0 ? passes("medianFanout", medianFanout) : null,
+      singleDataLayer:
+        uiFiles.length > 0 ? passes("directDbInUi", dbShare) : null,
+      lowFanout:
+        sampled.length > 0 ? passes("medianFanout", medianFanout) : null,
     },
   }
 }

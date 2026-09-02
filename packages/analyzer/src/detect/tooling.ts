@@ -8,7 +8,12 @@ const LINT_CONFIGS = [
 ]
 
 const ENV_TEMPLATES = [".env.example", ".env.sample", ".env.template"]
-const CONTAINER_FILES = ["dockerfile", "compose.yaml", "compose.yml", "docker-compose.yml"]
+const CONTAINER_FILES = [
+  "dockerfile",
+  "compose.yaml",
+  "compose.yml",
+  "docker-compose.yml",
+]
 
 export function detectTooling(facts: RawFacts) {
   const rootNames = facts.paths.filter((p) => !p.includes("/"))
@@ -16,7 +21,9 @@ export function detectTooling(facts: RawFacts) {
 
   return {
     has: {
-      lintConfig: rootNames.some((name) => LINT_CONFIGS.some((re) => re.test(name))),
+      lintConfig: rootNames.some((name) =>
+        LINT_CONFIGS.some((re) => re.test(name))
+      ),
       envExample: ENV_TEMPLATES.some((name) => lower.has(name)),
       container:
         CONTAINER_FILES.some((name) => lower.has(name)) ||

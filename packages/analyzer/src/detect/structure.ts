@@ -3,14 +3,30 @@ import { passes, THRESHOLDS } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
 const TYPE_NAMES = new Set([
-  "components", "hooks", "utils", "helpers", "common", "misc", "shared",
-  "lib", "types", "services", "models", "controllers", "constants", "styles",
+  "components",
+  "hooks",
+  "utils",
+  "helpers",
+  "common",
+  "misc",
+  "shared",
+  "lib",
+  "types",
+  "services",
+  "models",
+  "controllers",
+  "constants",
+  "styles",
 ])
 
 const SOURCE_ROOTS = ["src", "app", "lib", "apps", "packages"]
 
 function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return { value, threshold: THRESHOLDS[key].threshold, unit: THRESHOLDS[key].unit }
+  return {
+    value,
+    threshold: THRESHOLDS[key].threshold,
+    unit: THRESHOLDS[key].unit,
+  }
 }
 
 function topLevel(path: string): string {
@@ -25,7 +41,9 @@ function dirOf(path: string): string {
 
 function stem(path: string): string {
   const base = path.slice(path.lastIndexOf("/") + 1)
-  return base.replace(/\.(test|spec)\.[cm]?[jt]sx?$/, "").replace(/\.[cm]?[jt]sx?$/, "")
+  return base
+    .replace(/\.(test|spec)\.[cm]?[jt]sx?$/, "")
+    .replace(/\.[cm]?[jt]sx?$/, "")
 }
 
 function primarySourceRoot(codePaths: string[]): string {
@@ -65,15 +83,20 @@ export function detectStructure(facts: RawFacts) {
 
   const testPaths = facts.paths.filter(isTestFile)
   const sourceKeys = new Set(
-    codePaths.filter((p) => !isTestFile(p)).map((p) => `${dirOf(p)}::${stem(p)}`)
+    codePaths
+      .filter((p) => !isTestFile(p))
+      .map((p) => `${dirOf(p)}::${stem(p)}`)
   )
   const colocated = testPaths.filter((testPath) => {
     const dir = dirOf(testPath)
     const parent = dirOf(dir)
     const name = stem(testPath)
-    return sourceKeys.has(`${dir}::${name}`) || sourceKeys.has(`${parent}::${name}`)
+    return (
+      sourceKeys.has(`${dir}::${name}`) || sourceKeys.has(`${parent}::${name}`)
+    )
   }).length
-  const colocationShare = testPaths.length > 0 ? colocated / testPaths.length : 0
+  const colocationShare =
+    testPaths.length > 0 ? colocated / testPaths.length : 0
   measurements.colocatedTests = measure("testColocation", colocationShare)
 
   const root = primarySourceRoot(codePaths)
@@ -93,13 +116,19 @@ export function detectStructure(facts: RawFacts) {
     directories: new Set(facts.paths.map(dirOf).filter(Boolean)).size,
     measurements,
     has: {
-      predictableRoot: codePaths.length > 0 ? passes("rootConcentration", rootShare) : null,
+      predictableRoot:
+        codePaths.length > 0 ? passes("rootConcentration", rootShare) : null,
       shallowTree: facts.paths.length > 0 ? passes("maxDepth", maxDepth) : null,
-      colocatedTests: testPaths.length > 0 ? passes("testColocation", colocationShare) : null,
+      colocatedTests:
+        testPaths.length > 0 ? passes("testColocation", colocationShare) : null,
       generatedExcluded: !facts.paths.some((p) =>
-        GENERATED_DIRS.some((dir) => p === dir || p.startsWith(`${dir}/`) || p.includes(`/${dir}/`))
+        GENERATED_DIRS.some(
+          (dir) =>
+            p === dir || p.startsWith(`${dir}/`) || p.includes(`/${dir}/`)
+        )
       ),
-      featureFolders: children.size > 0 ? passes("typeNamedFolders", typeShare) : null,
+      featureFolders:
+        children.size > 0 ? passes("typeNamedFolders", typeShare) : null,
     },
   }
 }

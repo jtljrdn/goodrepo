@@ -21,7 +21,8 @@ test("parseLsTree drops submodules", () => {
 })
 
 test("parseLsTree keeps paths containing spaces", () => {
-  const line = "100644 blob a1b2c3d4e5f60718293a4b5c6d7e8f9012345678      7\tdocs/get started.md"
+  const line =
+    "100644 blob a1b2c3d4e5f60718293a4b5c6d7e8f9012345678      7\tdocs/get started.md"
   expect(parseLsTree(line)).toEqual([{ path: "docs/get started.md", bytes: 7 }])
 })
 

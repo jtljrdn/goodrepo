@@ -6,7 +6,8 @@ import { CAPS } from "../thresholds"
 // The agent picks these paths, so they are untrusted input. Everything must stay
 // inside the checkout: no absolute paths, no traversal out of the working tree.
 export function isSafePath(path: string): boolean {
-  if (path.length === 0 || path.startsWith("/") || path.startsWith("~")) return false
+  if (path.length === 0 || path.startsWith("/") || path.startsWith("~"))
+    return false
   return !path.split("/").includes("..")
 }
 
@@ -43,7 +44,9 @@ export function checkoutTools(
         directory: z
           .string()
           .nullable()
-          .describe("Directory to list, such as 'src' or 'apps/web'. Null lists the whole repository."),
+          .describe(
+            "Directory to list, such as 'src' or 'apps/web'. Null lists the whole repository."
+          ),
       }),
       execute: async ({ directory }) => {
         onCall({ tool: "list_files", argument: directory ?? "(root)" })
@@ -59,11 +62,16 @@ export function checkoutTools(
       description:
         "Read one tracked file from the repository. Use this before making any claim about a file's contents.",
       inputSchema: z.object({
-        path: z.string().describe("Repository-relative path, such as 'README.md' or 'src/index.ts'."),
+        path: z
+          .string()
+          .describe(
+            "Repository-relative path, such as 'README.md' or 'src/index.ts'."
+          ),
       }),
       execute: async ({ path }) => {
         onCall({ tool: "read_file", argument: path })
-        if (!isSafePath(path)) return { error: "Path must be inside the repository." }
+        if (!isSafePath(path))
+          return { error: "Path must be inside the repository." }
         const texts = await checkout.read([path])
         const text = texts.get(path)
         if (text === undefined) return { error: `No tracked file at ${path}.` }
@@ -75,7 +83,9 @@ export function checkoutTools(
       description:
         "Search the tracked files for a pattern and return matching lines with their file and line number.",
       inputSchema: z.object({
-        pattern: z.string().describe("A basic regular expression, passed to git grep."),
+        pattern: z
+          .string()
+          .describe("A basic regular expression, passed to git grep."),
       }),
       execute: async ({ pattern }) => {
         onCall({ tool: "search", argument: pattern })
@@ -88,7 +98,8 @@ export function checkoutTools(
           pattern,
         ])
         // git grep exits 1 when nothing matched, which is not an error here.
-        if (result.exitCode > 1) return { error: `Could not search for ${pattern}.` }
+        if (result.exitCode > 1)
+          return { error: `Could not search for ${pattern}.` }
         const lines = result.stdout.split("\n").filter(Boolean)
         return {
           matches: lines.slice(0, CAPS.deepGrepMatches),

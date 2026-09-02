@@ -30,13 +30,27 @@ const INSTRUCTIONS = [
 ].join("\n")
 
 const Claim = z.object({
-  path: z.string().describe("The documentation file the claim appears in, repository-relative"),
-  quote: z.string().describe("The claim copied verbatim from that file, long enough to locate again"),
-  kind: z.enum(["script", "path", "count", "content"]).describe("What would settle this claim"),
+  path: z
+    .string()
+    .describe(
+      "The documentation file the claim appears in, repository-relative"
+    ),
+  quote: z
+    .string()
+    .describe(
+      "The claim copied verbatim from that file, long enough to locate again"
+    ),
+  kind: z
+    .enum(["script", "path", "count", "content"])
+    .describe("What would settle this claim"),
   subject: z
     .string()
-    .describe("The bare thing named: a script name, a repository path, a number, or a short topic"),
-  claim: z.string().describe("One plain sentence restating what the documentation asserts"),
+    .describe(
+      "The bare thing named: a script name, a repository path, a number, or a short topic"
+    ),
+  claim: z
+    .string()
+    .describe("One plain sentence restating what the documentation asserts"),
 })
 
 const schema = z.object({ claims: z.array(Claim).max(CAPS.deepMaxClaims) })
@@ -44,8 +58,7 @@ const schema = z.object({ claims: z.array(Claim).max(CAPS.deepMaxClaims) })
 export type Claim = z.infer<typeof Claim>
 
 export type ClaimSet =
-  | { ok: true; claims: Claim[] }
-  | { ok: false; reason: string }
+  { ok: true; claims: Claim[] } | { ok: false; reason: string }
 
 export function docPaths(checkout: Checkout): string[] {
   return checkout.entries
@@ -56,20 +69,29 @@ export function docPaths(checkout: Checkout): string[] {
 
 export function buildDocPrompt(docs: [string, string][]): string {
   return docs
-    .flatMap(([path, text]) => [`--- ${path} ---`, text.slice(0, CAPS.deepDocBytes), ""])
+    .flatMap(([path, text]) => [
+      `--- ${path} ---`,
+      text.slice(0, CAPS.deepDocBytes),
+      "",
+    ])
     .join("\n")
 }
 
 export async function extractClaims(checkout: Checkout): Promise<ClaimSet> {
   const paths = docPaths(checkout)
-  if (paths.length === 0) return { ok: false, reason: "This repository has no documentation to check." }
+  if (paths.length === 0)
+    return {
+      ok: false,
+      reason: "This repository has no documentation to check.",
+    }
 
   const texts = await checkout.read(paths)
   const docs = paths.flatMap((path): [string, string][] => {
     const text = texts.get(path)
     return text === undefined ? [] : [[path, text]]
   })
-  if (docs.length === 0) return { ok: false, reason: "The documentation could not be read." }
+  if (docs.length === 0)
+    return { ok: false, reason: "The documentation could not be read." }
 
   try {
     // No tools here on purpose. This is a bounded reading task over a few kilobytes of prose,
@@ -84,8 +106,15 @@ export async function extractClaims(checkout: Checkout): Promise<ClaimSet> {
     return { ok: true, claims: output.claims }
   } catch (error) {
     if (NoObjectGeneratedError.isInstance(error)) {
-      return { ok: false, reason: "The model did not return a usable list of claims." }
+      return {
+        ok: false,
+        reason: "The model did not return a usable list of claims.",
+      }
     }
-    return { ok: false, reason: error instanceof Error ? error.message : "Claim extraction failed." }
+    return {
+      ok: false,
+      reason:
+        error instanceof Error ? error.message : "Claim extraction failed.",
+    }
   }
 }

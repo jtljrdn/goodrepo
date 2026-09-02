@@ -44,7 +44,11 @@ export const AGENT_SIGNALS: Partial<Record<SignalId, AgentSignal>> = {
 }
 
 const Observation = z.object({
-  pattern: z.string().describe("Short name for this way of doing it, as you would say it to a colleague"),
+  pattern: z
+    .string()
+    .describe(
+      "Short name for this way of doing it, as you would say it to a colleague"
+    ),
   path: z.string().describe("One repository file that shows this pattern"),
   reach: z
     .enum(["most", "some", "few"])
@@ -56,11 +60,15 @@ const Observation = z.object({
 const Verdict = z.object({
   applicable: z
     .boolean()
-    .describe("False when the repository has nothing of this kind at all, such as no HTTP handlers"),
+    .describe(
+      "False when the repository has nothing of this kind at all, such as no HTTP handlers"
+    ),
   patterns: z
     .array(Observation)
     .max(CAPS.deepMaxPatterns)
-    .describe("Each distinct way you saw it done. One entry means the repository does it one way."),
+    .describe(
+      "Each distinct way you saw it done. One entry means the repository does it one way."
+    ),
   reason: z.string().describe("One or two sentences describing what you saw"),
 })
 
@@ -91,7 +99,9 @@ export function judgeConsistency(verdict: VerdictBody): boolean | null {
  * which is what happened on small repositories. A keyed object makes omitting an answer
  * structurally impossible: the schema itself will not validate without every signal present.
  */
-function schemaFor(signals: SignalId[]): z.ZodType<Record<string, VerdictBody>> {
+function schemaFor(
+  signals: SignalId[]
+): z.ZodType<Record<string, VerdictBody>> {
   const shape: Record<string, typeof Verdict> = {}
   for (const id of signals) shape[id] = Verdict
   return z.object(shape)
@@ -117,7 +127,9 @@ export type SignalResolution =
  * nothing, and only the agent can tell those apart here.
  */
 export function unresolvedSignals(profile: RepoProfile): SignalId[] {
-  return (Object.keys(AGENT_SIGNALS) as SignalId[]).filter((id) => profile.has[id] === null)
+  return (Object.keys(AGENT_SIGNALS) as SignalId[]).filter(
+    (id) => profile.has[id] === null
+  )
 }
 
 /**
@@ -159,7 +171,9 @@ function instructions(signals: SignalId[], maxSteps: number): string {
     "The open questions:",
     ...signals.flatMap((id) => {
       const spec = AGENT_SIGNALS[id]
-      return spec === undefined ? [] : ["", `  ${id}`, `    ${spec.question}`, `    ${spec.lookFor}`]
+      return spec === undefined
+        ? []
+        : ["", `  ${id}`, `    ${spec.question}`, `    ${spec.lookFor}`]
     }),
     "",
     `You have ${maxSteps} tool calls for all of them together. The evidence overlaps, so a file`,
@@ -220,7 +234,8 @@ export function partitionVerdicts(
     // point at real ones: every pattern claimed must come with a file that exists here.
     const grounded = !verdict.applicable
       ? true
-      : verdict.patterns.length > 0 && verdict.patterns.every((p) => files.has(p.path))
+      : verdict.patterns.length > 0 &&
+        verdict.patterns.every((p) => files.has(p.path))
     ;(grounded ? out.verdicts : out.unsupported).push(verdict)
   }
   return out
@@ -232,9 +247,13 @@ export async function resolveSignals(
   profile: RepoProfile,
   onToolCall: (call: ToolCall) => void = () => {}
 ): Promise<SignalResolution> {
-  if (signals.length === 0) return { ok: true, verdicts: [], unsupported: [], unmatched: [], steps: 0 }
+  if (signals.length === 0)
+    return { ok: true, verdicts: [], unsupported: [], unmatched: [], steps: 0 }
 
-  const budget = Math.min(CAPS.deepMaxSteps, signals.length * CAPS.deepStepsPerSignal)
+  const budget = Math.min(
+    CAPS.deepMaxSteps,
+    signals.length * CAPS.deepStepsPerSignal
+  )
   const agent = new ToolLoopAgent({
     model: MODEL,
     instructions: instructions(signals, budget),
@@ -259,22 +278,40 @@ export async function resolveSignals(
     // back through the same schema to get something typed rather than asserting.
     const parsed = schemaFor(signals).safeParse(result.output)
     if (!parsed.success) {
-      return { ok: false, reason: "The scan returned answers in an unexpected shape." }
+      return {
+        ok: false,
+        reason: "The scan returned answers in an unexpected shape.",
+      }
     }
-    const answered: SignalVerdict[] = Object.entries(parsed.data).map(([signal, verdict]) => ({
-      ...verdict,
-      signal,
-    }))
+    const answered: SignalVerdict[] = Object.entries(parsed.data).map(
+      ([signal, verdict]) => ({
+        ...verdict,
+        signal,
+      })
+    )
     const { verdicts, unsupported, unmatched } = partitionVerdicts(
       answered,
       signals,
       new Set(checkout.entries.map((entry) => entry.path))
     )
-    return { ok: true, verdicts, unsupported, unmatched, steps: result.steps.length }
+    return {
+      ok: true,
+      verdicts,
+      unsupported,
+      unmatched,
+      steps: result.steps.length,
+    }
   } catch (error) {
     if (NoObjectGeneratedError.isInstance(error)) {
-      return { ok: false, reason: "The scan did not reach an answer for the open signals." }
+      return {
+        ok: false,
+        reason: "The scan did not reach an answer for the open signals.",
+      }
     }
-    return { ok: false, reason: error instanceof Error ? error.message : "Signal resolution failed." }
+    return {
+      ok: false,
+      reason:
+        error instanceof Error ? error.message : "Signal resolution failed.",
+    }
   }
 }

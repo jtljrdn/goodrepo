@@ -4,11 +4,17 @@ import type { RawFacts } from "../types"
 const HEADING = /^#{1,6}\s+(.+)$/gm
 
 const SECTIONS: { key: string; match: RegExp }[] = [
-  { key: "architecture", match: /\b(architecture|structure|overview|layout)\b/ },
+  {
+    key: "architecture",
+    match: /\b(architecture|structure|overview|layout)\b/,
+  },
   { key: "testing", match: /\b(test|testing|tests)\b/ },
   { key: "database", match: /\b(database|schema|migration|migrations|orm)\b/ },
   { key: "api", match: /\b(api|routes|endpoints|handlers)\b/ },
-  { key: "conventions", match: /\b(style|conventions|naming|lint|formatting)\b/ },
+  {
+    key: "conventions",
+    match: /\b(style|conventions|naming|lint|formatting)\b/,
+  },
 ]
 
 const SINGLE_TEST = [
@@ -55,7 +61,9 @@ export function detectDocs(facts: RawFacts, packageManager: string | null) {
     ...headings(contributing),
   ]
 
-  const sections = SECTIONS.filter((s) => allHeadings.some((h) => s.match.test(h))).map((s) => s.key)
+  const sections = SECTIONS.filter((s) =>
+    allHeadings.some((h) => s.match.test(h))
+  ).map((s) => s.key)
   const has = (key: string) => sections.includes(key)
 
   const managerName = /^[a-z]+/.exec(packageManager ?? "")?.[0] ?? ""
@@ -70,9 +78,12 @@ export function detectDocs(facts: RawFacts, packageManager: string | null) {
       readmeDepth: readme.length > 0 && passes("readmeWords", readmeWords),
       agentsMd: agents.length > 0,
       claudeMd: claude.length > 0,
-      docPackageManager: managerName.length > 0 && new RegExp(`\\b${managerName}\\b`).test(all),
+      docPackageManager:
+        managerName.length > 0 && new RegExp(`\\b${managerName}\\b`).test(all),
       docTestCommand: /\b(run\s+)?test\b/.test(all) || has("testing"),
-      docBuildCommand: /\brun\s+build\b|\bbuild\b/.test(all) && /\brun\s+dev\b|\bdev\b/.test(all),
+      docBuildCommand:
+        /\brun\s+build\b|\bbuild\b/.test(all) &&
+        /\brun\s+dev\b|\bdev\b/.test(all),
       docArchitecture: has("architecture"),
       docDatabase: has("database"),
       docApiConventions: has("api"),

@@ -464,7 +464,10 @@ export function scoreCategory(
  * `answered` names the signals a deep scan reported on. It changes nothing about the arithmetic
  * and only sharpens the wording for the ones it reported as not applicable.
  */
-export function scoreRepo(p: RepoProfile, answered: ReadonlySet<SignalId> = EMPTY) {
+export function scoreRepo(
+  p: RepoProfile,
+  answered: ReadonlySet<SignalId> = EMPTY
+) {
   const categories = CATEGORIES.map((def) => scoreCategory(def, p, answered))
   const scored = categories.filter(
     (c): c is ScoredCategory & { score: number } => c.score !== null

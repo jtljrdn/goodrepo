@@ -12,7 +12,10 @@ export type CheckoutTarget = {
 export type Checkout = {
   entries: TreeEntry[]
   read: (paths: string[]) => Promise<Map<string, string>>
-  run: (command: string, args: string[]) => Promise<{ stdout: string; exitCode: number }>
+  run: (
+    command: string,
+    args: string[]
+  ) => Promise<{ stdout: string; exitCode: number }>
 }
 
 export class CheckoutError extends Error {}
@@ -37,7 +40,12 @@ export function parseLsTree(output: string): TreeEntry[] {
 
 function gitSource(target: CheckoutTarget) {
   const url = `https://github.com/${target.owner}/${target.repo}.git`
-  const base = { type: "git" as const, url, depth: 1, revision: target.revision }
+  const base = {
+    type: "git" as const,
+    url,
+    depth: 1,
+    revision: target.revision,
+  }
   // GitHub accepts any username when the password is a token.
   return target.token
     ? { ...base, username: "x-access-token", password: target.token }
@@ -64,14 +72,19 @@ export async function withCheckout<T>(
 
     const listed = await run("git", ["ls-tree", "-r", "--long", "HEAD"])
     if (listed.exitCode !== 0) {
-      throw new CheckoutError(`Could not list files in ${target.owner}/${target.repo}.`)
+      throw new CheckoutError(
+        `Could not list files in ${target.owner}/${target.repo}.`
+      )
     }
 
     const read = async (paths: string[]) => {
       const texts = new Map<string, string>()
       const buffers = await Promise.all(
         paths.map(async (path) => {
-          const buffer = await sandbox.readFileToBuffer({ path, cwd: sandbox.cwd })
+          const buffer = await sandbox.readFileToBuffer({
+            path,
+            cwd: sandbox.cwd,
+          })
           return [path, buffer] as const
         })
       )

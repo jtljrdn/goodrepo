@@ -17,7 +17,8 @@ export function directoriesOf(paths: string[]): Set<string> {
   const dirs = new Set<string>()
   for (const path of paths) {
     const parts = path.split("/")
-    for (let i = 1; i < parts.length; i += 1) dirs.add(parts.slice(0, i).join("/"))
+    for (let i = 1; i < parts.length; i += 1)
+      dirs.add(parts.slice(0, i).join("/"))
   }
   return dirs
 }
@@ -52,7 +53,10 @@ export function checkFinding(
   if (finding.checkedPath === null) {
     return "Nothing in this repository settles the claim."
   }
-  if (!files.has(finding.checkedPath) && !directories.has(finding.checkedPath)) {
+  if (
+    !files.has(finding.checkedPath) &&
+    !directories.has(finding.checkedPath)
+  ) {
     return `${finding.checkedPath} is not in this repository, so the claim was never checked against it.`
   }
   return null
@@ -68,13 +72,20 @@ export async function verifyFindings(
   const files = new Set(paths)
   const directories = directoriesOf(paths)
 
-  const quoted = [...new Set(findings.map((f) => f.path).filter((p) => files.has(p)))]
+  const quoted = [
+    ...new Set(findings.map((f) => f.path).filter((p) => files.has(p))),
+  ]
   const texts = await checkout.read(quoted)
 
   const kept: DeepFinding[] = []
   const dropped: RejectedFinding[] = []
   for (const finding of findings) {
-    const reason = checkFinding(finding, files, directories, texts.get(finding.path))
+    const reason = checkFinding(
+      finding,
+      files,
+      directories,
+      texts.get(finding.path)
+    )
     if (reason === null) kept.push(finding)
     else dropped.push({ finding, reason })
   }

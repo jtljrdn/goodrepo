@@ -34,7 +34,10 @@ function dirOf(path: string): string {
   return slash === -1 ? "" : path.slice(0, slash)
 }
 
-export function chooseSample(entries: TreeEntry[], limit = CAPS.importSample): string[] {
+export function chooseSample(
+  entries: TreeEntry[],
+  limit = CAPS.importSample
+): string[] {
   const eligible = entries.filter(
     (e) => isCodeFile(e.path) && e.bytes > 0 && e.bytes <= CAPS.perFileBytes
   )
@@ -68,10 +71,14 @@ export function chooseSample(entries: TreeEntry[], limit = CAPS.importSample): s
 }
 
 export function chooseConfigFiles(entries: TreeEntry[]): string[] {
-  const usable = entries.filter((e) => e.bytes > 0 && e.bytes <= CAPS.perFileBytes)
+  const usable = entries.filter(
+    (e) => e.bytes > 0 && e.bytes <= CAPS.perFileBytes
+  )
   const root = usable.filter((e) => !e.path.includes("/") && isKeptFile(e.path))
   const nested = usable.filter(
-    (e) => e.path.startsWith(".github/workflows/") || e.path.startsWith(".devcontainer/")
+    (e) =>
+      e.path.startsWith(".github/workflows/") ||
+      e.path.startsWith(".devcontainer/")
   )
   return [...root, ...nested].map((e) => e.path).slice(0, CAPS.configFiles)
 }
@@ -88,7 +95,8 @@ export function collect(
 
   for (const entry of entries) {
     const text = texts.get(entry.path)
-    if (text !== undefined && isKeptFile(entry.path)) keptText.set(entry.path, text)
+    if (text !== undefined && isKeptFile(entry.path))
+      keptText.set(entry.path, text)
 
     if (isCodeFile(entry.path)) {
       codeFiles.push({
@@ -105,7 +113,10 @@ export function collect(
     paths,
     codeFiles,
     keptText,
-    sample: sampledCount === 0 ? null : { sampled: sampledCount, total: codeFiles.length },
+    sample:
+      sampledCount === 0
+        ? null
+        : { sampled: sampledCount, total: codeFiles.length },
     truncated,
   }
 }

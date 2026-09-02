@@ -1,8 +1,17 @@
 import { expect, test } from "bun:test"
 import type { RepoProfile, SignalId } from "../types"
-import { AGENT_SIGNALS, judgeConsistency, partitionVerdicts, repoBrief, unresolvedSignals, type SignalVerdict } from "./signals"
+import {
+  AGENT_SIGNALS,
+  judgeConsistency,
+  partitionVerdicts,
+  repoBrief,
+  unresolvedSignals,
+  type SignalVerdict,
+} from "./signals"
 
-function profileWith(has: Partial<Record<SignalId, boolean | null>>): RepoProfile {
+function profileWith(
+  has: Partial<Record<SignalId, boolean | null>>
+): RepoProfile {
   const full = Object.fromEntries(
     (Object.keys(AGENT_SIGNALS) as SignalId[]).map((id) => [id, true])
   ) as Record<SignalId, boolean | null>
@@ -10,10 +19,11 @@ function profileWith(has: Partial<Record<SignalId, boolean | null>>): RepoProfil
 }
 
 test("only signals the static pass left open are handed to the agent", () => {
-  expect(unresolvedSignals(profileWith({ consistentErrors: null, singleDataLayer: null }))).toEqual([
-    "consistentErrors",
-    "singleDataLayer",
-  ])
+  expect(
+    unresolvedSignals(
+      profileWith({ consistentErrors: null, singleDataLayer: null })
+    )
+  ).toEqual(["consistentErrors", "singleDataLayer"])
 })
 
 test("a repository the static pass fully answered gives the agent nothing to do", () => {
@@ -21,7 +31,9 @@ test("a repository the static pass fully answered gives the agent nothing to do"
 })
 
 test("a signal answered false is settled, not open", () => {
-  expect(unresolvedSignals(profileWith({ consistentErrors: false }))).toEqual([])
+  expect(unresolvedSignals(profileWith({ consistentErrors: false }))).toEqual(
+    []
+  )
 })
 
 test("every agent signal states both the question and what to look for", () => {
@@ -35,15 +47,25 @@ test("every agent signal states both the question and what to look for", () => {
 test("a zero static route count does not withhold the routing question", () => {
   // honojs/hono reports apiRoutes=0 under the static heuristic and is still an HTTP framework
   // the agent judged consistent. Static absence is not evidence of absence here.
-  const profile = { ...profileWith({ consistentRouteShape: null }), apiRoutes: 0 } as RepoProfile
+  const profile = {
+    ...profileWith({ consistentRouteShape: null }),
+    apiRoutes: 0,
+  } as RepoProfile
   expect(unresolvedSignals(profile)).toEqual(["consistentRouteShape"])
 })
 
 test("the brief hands over what the static pass already measured", () => {
   const profile = {
     ...profileWith({}),
-    owner: "acme", repo: "app", framework: "nextjs", language: "TypeScript",
-    files: 99, directories: 30, apiRoutes: 4, testFiles: 12, testFramework: "bun:test",
+    owner: "acme",
+    repo: "app",
+    framework: "nextjs",
+    language: "TypeScript",
+    files: 99,
+    directories: 30,
+    apiRoutes: 4,
+    testFiles: 12,
+    testFramework: "bun:test",
   } as RepoProfile
   const checkout = {
     entries: [
@@ -69,9 +91,14 @@ test("the brief ignores root files when describing the layout", () => {
     read: async () => new Map(),
     run: async () => ({ stdout: "", exitCode: 0 }),
   }
-  expect(repoBrief(profileWith({}) as RepoProfile, checkout)).not.toContain("README.md")
+  expect(repoBrief(profileWith({}) as RepoProfile, checkout)).not.toContain(
+    "README.md"
+  )
 })
-const answer = (signal: string, over: Partial<SignalVerdict> = {}): SignalVerdict => ({
+const answer = (
+  signal: string,
+  over: Partial<SignalVerdict> = {}
+): SignalVerdict => ({
   signal,
   applicable: true,
   patterns: [{ pattern: "one way", path: "src/index.ts", reach: "most" }],
@@ -90,12 +117,20 @@ test("a grounded observation for a question we asked is kept", () => {
 })
 
 test("surrounding whitespace in a signal name does not lose the answer", () => {
-  expect(partitionVerdicts([answer("  consistentErrors ")], asked, inRepo).verdicts).toHaveLength(1)
+  expect(
+    partitionVerdicts([answer("  consistentErrors ")], asked, inRepo).verdicts
+  ).toHaveLength(1)
 })
 
 test("a pattern citing a file outside the checkout is set aside", () => {
   const out = partitionVerdicts(
-    [answer("consistentErrors", { patterns: [{ pattern: "x", path: "node_modules/x/i.js", reach: "most" }] })],
+    [
+      answer("consistentErrors", {
+        patterns: [
+          { pattern: "x", path: "node_modules/x/i.js", reach: "most" },
+        ],
+      }),
+    ],
     asked,
     inRepo
   )
@@ -105,10 +140,14 @@ test("a pattern citing a file outside the checkout is set aside", () => {
 
 test("one bad path among several spoils the whole answer", () => {
   const out = partitionVerdicts(
-    [answer("consistentErrors", { patterns: [
-      { pattern: "good", path: "src/index.ts", reach: "most" },
-      { pattern: "bad", path: "dist/bundle.js", reach: "few" },
-    ] })],
+    [
+      answer("consistentErrors", {
+        patterns: [
+          { pattern: "good", path: "src/index.ts", reach: "most" },
+          { pattern: "bad", path: "dist/bundle.js", reach: "few" },
+        ],
+      }),
+    ],
     asked,
     inRepo
   )
@@ -116,7 +155,11 @@ test("one bad path among several spoils the whole answer", () => {
 })
 
 test("an applicable answer with no patterns at all is set aside", () => {
-  const out = partitionVerdicts([answer("consistentErrors", { patterns: [] })], asked, inRepo)
+  const out = partitionVerdicts(
+    [answer("consistentErrors", { patterns: [] })],
+    asked,
+    inRepo
+  )
   expect(out.unsupported).toHaveLength(1)
 })
 
@@ -150,17 +193,23 @@ test("no answer is ever lost between the three buckets", () => {
     answer("consistentErrors"),
     answer("readme"),
     answer("consistentErrors"),
-    answer("singleDataLayer", { patterns: [{ pattern: "x", path: "nope.ts", reach: "most" }] }),
+    answer("singleDataLayer", {
+      patterns: [{ pattern: "x", path: "nope.ts", reach: "most" }],
+    }),
   ]
   const out = partitionVerdicts(raw, asked, inRepo)
-  expect(out.verdicts.length + out.unsupported.length + out.unmatched.length).toBe(raw.length)
+  expect(
+    out.verdicts.length + out.unsupported.length + out.unmatched.length
+  ).toBe(raw.length)
 })
 
 test("the cutoff lives in code: identical observations always give the same verdict", () => {
-  const observed = answer("consistentErrors", { patterns: [
-    { pattern: "thrown", path: "src/index.ts", reach: "most" },
-    { pattern: "returned", path: "src/other.ts", reach: "most" },
-  ] })
+  const observed = answer("consistentErrors", {
+    patterns: [
+      { pattern: "thrown", path: "src/index.ts", reach: "most" },
+      { pattern: "returned", path: "src/other.ts", reach: "most" },
+    ],
+  })
   expect(judgeConsistency(observed)).toBe(false)
   expect(judgeConsistency(observed)).toBe(false)
 })

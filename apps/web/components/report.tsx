@@ -389,7 +389,9 @@ export function DeepVerdicts({
             key={verdict.signal}
             className="flex items-start gap-2.5 border-b border-border/60 py-5 last:border-b-0"
           >
-            <span className={cn("mt-0.5 w-3 shrink-0 text-xs", SIGNAL_TONE[status])}>
+            <span
+              className={cn("mt-0.5 w-3 shrink-0 text-xs", SIGNAL_TONE[status])}
+            >
               {SIGNAL_MARK[status]}
             </span>
             <div className="min-w-0 flex-1">

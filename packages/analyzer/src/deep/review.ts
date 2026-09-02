@@ -68,10 +68,16 @@ const Finding = z.object({
     .enum(["high", "medium", "low"])
     .describe("How badly an agent following this claim would go wrong"),
   title: z.string().describe("One line under 80 characters naming the problem"),
-  path: z.string().describe("The documentation file the claim appears in, repository-relative"),
+  path: z
+    .string()
+    .describe(
+      "The documentation file the claim appears in, repository-relative"
+    ),
   quote: z
     .string()
-    .describe("The exact text of the claim, copied verbatim from that file so it can be located again"),
+    .describe(
+      "The exact text of the claim, copied verbatim from that file so it can be located again"
+    ),
   checkedPath: z
     .string()
     .nullable()
@@ -80,7 +86,9 @@ const Finding = z.object({
     ),
   evidence: z
     .string()
-    .describe("What you read that contradicts the quote, naming the file or listing you checked"),
+    .describe(
+      "What you read that contradicts the quote, naming the file or listing you checked"
+    ),
   fix: z.string().describe("One concrete action a maintainer can take"),
 })
 
@@ -95,12 +103,21 @@ export type DeepFinding = z.infer<typeof Finding>
  * returned nothing at all. Past this point its tools are taken away, so the only thing left
  * to do is write up what it already found.
  */
-export function shouldLand(stepNumber: number, maxSteps: number, landing: number): boolean {
+export function shouldLand(
+  stepNumber: number,
+  maxSteps: number,
+  landing: number
+): boolean {
   return stepNumber >= maxSteps - landing
 }
 
 export type DeepReview =
-  | { ok: true; findings: DeepFinding[]; dropped: RejectedFinding[]; steps: number }
+  | {
+      ok: true
+      findings: DeepFinding[]
+      dropped: RejectedFinding[]
+      steps: number
+    }
   | { ok: false; reason: string }
 
 export async function deepReview(
@@ -120,7 +137,9 @@ export async function deepReview(
     tools: checkoutTools(checkout, onToolCall),
     stopWhen: isStepCount(CAPS.deepMaxSteps),
     prepareStep: ({ stepNumber }) =>
-      shouldLand(stepNumber, CAPS.deepMaxSteps, CAPS.deepLandingSteps) ? { activeTools: [] } : {},
+      shouldLand(stepNumber, CAPS.deepMaxSteps, CAPS.deepLandingSteps)
+        ? { activeTools: [] }
+        : {},
     // Anthropic needs explicit cache_control markers. The Gateway places them for us:
     // one on the last message so each request extends the previous one's cache, and one
     // further back so a request whose tail changed still reads a stable prefix.
@@ -132,7 +151,10 @@ export async function deepReview(
     const result = await agent.generate({
       prompt: `Audit the documentation of ${repo.owner}/${repo.repo}.`,
     })
-    const { kept, dropped } = await verifyFindings(result.output.findings, checkout)
+    const { kept, dropped } = await verifyFindings(
+      result.output.findings,
+      checkout
+    )
     return { ok: true, findings: kept, dropped, steps: result.steps.length }
   } catch (error) {
     if (NoOutputGeneratedError.isInstance(error)) {

@@ -28,9 +28,11 @@ test("docPaths finds documentation and ignores everything else", () => {
 })
 
 test("docPaths ignores documentation inside generated directories", () => {
-  expect(docPaths(checkoutOf(["node_modules/foo/README.md", "dist/README.md", "README.md"]))).toEqual([
-    "README.md",
-  ])
+  expect(
+    docPaths(
+      checkoutOf(["node_modules/foo/README.md", "dist/README.md", "README.md"])
+    )
+  ).toEqual(["README.md"])
 })
 
 test("docPaths returns nothing for a repository with no documentation", () => {
@@ -49,7 +51,9 @@ test("buildDocPrompt labels each document so quotes can be traced back", () => {
 })
 
 test("buildDocPrompt truncates a document past the cap", () => {
-  const prompt = buildDocPrompt([["README.md", "x".repeat(CAPS.deepDocBytes + 500)]])
+  const prompt = buildDocPrompt([
+    ["README.md", "x".repeat(CAPS.deepDocBytes + 500)],
+  ])
   expect(prompt.length).toBeLessThan(CAPS.deepDocBytes + 200)
 })
 

@@ -8,20 +8,32 @@ const LOCKFILES: Record<string, string> = {
   "yarn.lock": "yarn",
 }
 
-const RUNTIME_FILES = [".nvmrc", ".node-version", ".tool-versions", "mise.toml", ".mise.toml"]
+const RUNTIME_FILES = [
+  ".nvmrc",
+  ".node-version",
+  ".tool-versions",
+  "mise.toml",
+  ".mise.toml",
+]
 
-export function readPackageJson(facts: RawFacts): Record<string, unknown> | null {
+export function readPackageJson(
+  facts: RawFacts
+): Record<string, unknown> | null {
   const text = facts.keptText.get("package.json")
   if (!text) return null
   try {
     const parsed: unknown = JSON.parse(text)
-    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : null
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : null
   } catch {
     return null
   }
 }
 
-export function readScripts(pkg: Record<string, unknown> | null): Record<string, string> {
+export function readScripts(
+  pkg: Record<string, unknown> | null
+): Record<string, string> {
   const raw = pkg?.scripts
   if (typeof raw !== "object" || raw === null) return {}
   const out: Record<string, string> = {}
@@ -33,7 +45,11 @@ export function readScripts(pkg: Record<string, unknown> | null): Record<string,
 
 // Script names vary by repo: `typecheck`, `type-check`, `test:types`, `check-types`.
 // Match the name by pattern first, then fall back to what the command actually runs.
-function hasScript(scripts: Record<string, string>, name: RegExp, fallback?: RegExp): boolean {
+function hasScript(
+  scripts: Record<string, string>,
+  name: RegExp,
+  fallback?: RegExp
+): boolean {
   const entries = Object.entries(scripts)
   if (entries.some(([script]) => name.test(script))) return true
   if (!fallback) return false
@@ -46,8 +62,10 @@ export function detectManifest(facts: RawFacts) {
   const rootNames = new Set(facts.paths.filter((p) => !p.includes("/")))
 
   const lockName = Object.keys(LOCKFILES).find((name) => rootNames.has(name))
-  const pinned = typeof pkg?.packageManager === "string" ? pkg.packageManager : null
-  const packageManager = pinned ?? (lockName ? (LOCKFILES[lockName] ?? null) : null)
+  const pinned =
+    typeof pkg?.packageManager === "string" ? pkg.packageManager : null
+  const packageManager =
+    pinned ?? (lockName ? (LOCKFILES[lockName] ?? null) : null)
 
   const engines = pkg?.engines
   const enginesNode =

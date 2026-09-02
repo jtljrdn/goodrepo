@@ -6,7 +6,14 @@ import { detectMetrics } from "./detect/metrics"
 import { detectStructure } from "./detect/structure"
 import { detectTests } from "./detect/tests"
 import { detectTooling } from "./detect/tooling"
-import type { Measurement, RawFacts, RepoMeta, RepoProfile, SignalId, TreeEntry } from "./types"
+import type {
+  Measurement,
+  RawFacts,
+  RepoMeta,
+  RepoProfile,
+  SignalId,
+  TreeEntry,
+} from "./types"
 
 export * from "./types"
 export { CAPS, passes, THRESHOLDS } from "./thresholds"
@@ -15,12 +22,22 @@ export { CheckoutError, parseLsTree, withCheckout } from "./sandbox"
 export { buildDocPrompt, docPaths, extractClaims } from "./deep/claims"
 export type { Claim, ClaimSet } from "./deep/claims"
 export { deepReview, shouldLand } from "./deep/review"
-export { AGENT_SIGNALS, repoBrief, resolveSignals, unresolvedSignals } from "./deep/signals"
+export {
+  AGENT_SIGNALS,
+  repoBrief,
+  resolveSignals,
+  unresolvedSignals,
+} from "./deep/signals"
 export { applyVerdicts, deepScan } from "./deep/scan"
 export type { DeepScan } from "./deep/scan"
 export type { SignalResolution, SignalVerdict } from "./deep/signals"
 export type { DeepFinding, DeepReview } from "./deep/review"
-export { checkFinding, directoriesOf, normalize, verifyFindings } from "./deep/verify"
+export {
+  checkFinding,
+  directoriesOf,
+  normalize,
+  verifyFindings,
+} from "./deep/verify"
 export type { RejectedFinding, Verification } from "./deep/verify"
 export type { Checkout, CheckoutTarget } from "./sandbox"
 export { chooseConfigFiles, chooseSample } from "./collect"
@@ -53,7 +70,8 @@ function detectFramework(facts: RawFacts): string {
       const pkg = parsed as Record<string, unknown>
       for (const key of ["dependencies", "devDependencies"]) {
         const group = pkg[key]
-        if (typeof group === "object" && group !== null) deps.push(...Object.keys(group))
+        if (typeof group === "object" && group !== null)
+          deps.push(...Object.keys(group))
       }
     }
   } catch {

@@ -3,7 +3,13 @@ import { detectTooling } from "./tooling"
 import type { RawFacts } from "../types"
 
 function facts(paths: string[]): RawFacts {
-  return { paths, codeFiles: [], keptText: new Map(), sample: null, truncated: null }
+  return {
+    paths,
+    codeFiles: [],
+    keptText: new Map(),
+    sample: null,
+    truncated: null,
+  }
 }
 
 test("detects lint config in any supported form", () => {
@@ -21,7 +27,13 @@ test("detects env templates", () => {
 
 test("detects containers and CI", () => {
   expect(detectTooling(facts(["Dockerfile"])).has.container).toBe(true)
-  expect(detectTooling(facts([".devcontainer/devcontainer.json"])).has.container).toBe(true)
-  expect(detectTooling(facts([".github/workflows/ci.yml"])).has.ciWorkflow).toBe(true)
-  expect(detectTooling(facts([".github/ISSUE_TEMPLATE/bug.yml"])).has.ciWorkflow).toBe(false)
+  expect(
+    detectTooling(facts([".devcontainer/devcontainer.json"])).has.container
+  ).toBe(true)
+  expect(
+    detectTooling(facts([".github/workflows/ci.yml"])).has.ciWorkflow
+  ).toBe(true)
+  expect(
+    detectTooling(facts([".github/ISSUE_TEMPLATE/bug.yml"])).has.ciWorkflow
+  ).toBe(false)
 })

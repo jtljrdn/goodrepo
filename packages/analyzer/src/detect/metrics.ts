@@ -4,7 +4,11 @@ import type { Measurement, RawFacts, SignalId } from "../types"
 type Casing = "kebab" | "camel" | "pascal" | "snake"
 
 function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return { value, threshold: THRESHOLDS[key].threshold, unit: THRESHOLDS[key].unit }
+  return {
+    value,
+    threshold: THRESHOLDS[key].threshold,
+    unit: THRESHOLDS[key].unit,
+  }
 }
 
 function median(values: number[]): number {
@@ -39,7 +43,8 @@ export function detectMetrics(facts: RawFacts) {
     counts.set(casing, (counts.get(casing) ?? 0) + 1)
   }
   const dominant = Math.max(0, ...counts.values())
-  const namingShare = facts.codeFiles.length > 0 ? dominant / facts.codeFiles.length : 0
+  const namingShare =
+    facts.codeFiles.length > 0 ? dominant / facts.codeFiles.length : 0
   measurements.consistentNaming = measure("namingConsistency", namingShare)
 
   const hasFiles = facts.codeFiles.length > 0
@@ -51,8 +56,12 @@ export function detectMetrics(facts: RawFacts) {
     measurements,
     has: {
       smallFiles: hasFiles ? passes("medianFileBytes", medianFileBytes) : null,
-      noMegaFiles: hasFiles ? passes("largestFileBytes", largestFileBytes) : null,
-      consistentNaming: hasFiles ? passes("namingConsistency", namingShare) : null,
+      noMegaFiles: hasFiles
+        ? passes("largestFileBytes", largestFileBytes)
+        : null,
+      consistentNaming: hasFiles
+        ? passes("namingConsistency", namingShare)
+        : null,
     },
   }
 }

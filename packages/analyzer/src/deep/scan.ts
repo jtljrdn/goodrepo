@@ -1,6 +1,11 @@
 import { withCheckout, type CheckoutTarget } from "../sandbox"
 import type { RepoProfile, SignalId } from "../types"
-import { judgeConsistency, resolveSignals, unresolvedSignals, type SignalVerdict } from "./signals"
+import {
+  judgeConsistency,
+  resolveSignals,
+  unresolvedSignals,
+  type SignalVerdict,
+} from "./signals"
 import type { ToolCall } from "./tools"
 
 export type DeepScan = {
@@ -13,7 +18,10 @@ export type DeepScan = {
   failure: string | null
 }
 
-export function applyVerdicts(profile: RepoProfile, verdicts: SignalVerdict[]): RepoProfile {
+export function applyVerdicts(
+  profile: RepoProfile,
+  verdicts: SignalVerdict[]
+): RepoProfile {
   const has = { ...profile.has }
   for (const verdict of verdicts) {
     // A null stays null: the repository has nothing of this kind to judge, which is not the
@@ -49,8 +57,14 @@ export async function deepScan(
   // share a sandbox, an identical prompt and the gateway's cache, so they are not independent
   // samples and unanimity measures correlation rather than confidence.
   return withCheckout(target, async (checkout) => {
-    const resolution = await resolveSignals(checkout, asked, profile, onToolCall)
-    if (!resolution.ok) return { profile, asked, verdicts: [], failure: resolution.reason }
+    const resolution = await resolveSignals(
+      checkout,
+      asked,
+      profile,
+      onToolCall
+    )
+    if (!resolution.ok)
+      return { profile, asked, verdicts: [], failure: resolution.reason }
     return {
       profile: applyVerdicts(profile, resolution.verdicts),
       asked,
