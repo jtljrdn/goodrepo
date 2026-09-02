@@ -21,9 +21,9 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : "http://localhost:3000"
 
-const title = "GoodRepo — agent-readiness score for any GitHub repo"
+const title = "GoodRepo - agent-readiness score for any GitHub repo"
 const description =
-  "GoodRepo scores public GitHub repositories for AI agent readiness from measurable, deterministic repository signals."
+  "GoodRepo scores GitHub repositories for AI agent readiness from measurable, deterministic repository signals."
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
