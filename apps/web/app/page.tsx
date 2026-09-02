@@ -33,44 +33,6 @@ const TICKER: { points: string; text: string }[] = [
   { points: "+15", text: "Folders are named after domains, not types" },
 ]
 
-const PROFILE_EXAMPLE = `{
-  "framework": "nextjs",
-  "files": 842,
-  "maxDirectoryDepth": 7,
-  "hasAgentsMd": true,
-  "hasClaudeMd": false,
-  "scripts": {
-    "test": "vitest",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit"
-  },
-  "testFramework": "vitest",
-  "apiRoutes": 18,
-  "validationPatterns": ["zod", "manual", "zod"],
-  "docs": { "readmeWords": 1820, "agentsMdWords": 640 }
-}`
-
-const LEVELS = [
-  {
-    name: "Fast scan",
-    cost: "0 tokens",
-    available: true,
-    body: "Deterministic. Reads the file tree, package manifest, configs, and instruction files. This is what you get from pasting a URL. Free for public repositories.",
-  },
-  {
-    name: "Deep scan",
-    cost: "~10k tokens",
-    available: false,
-    body: "Adds targeted LLM calls against the repository profile and a few representative files. BYOK.",
-  },
-  {
-    name: "Benchmark",
-    cost: "your compute",
-    available: false,
-    body: "Runs real coding agents against tasks generated from the repository, then measures success, cost, and scope violations. Use whatever agent you like.",
-  },
-]
-
 export default function Page() {
   return (
     <>
@@ -78,8 +40,8 @@ export default function Page() {
         <span className="hidden sm:inline">Fast scan is free</span>
       </SiteHeader>
 
-      <main className="mx-auto max-w-5xl px-6 pb-24">
-        <section className="py-16 sm:py-24">
+      <main className="mx-auto max-w-5xl sm:border-x sm:border-border/60">
+        <section className="px-6 py-16 sm:py-24">
           <h1 className="max-w-3xl text-4xl leading-[1.1] font-medium tracking-tight text-balance sm:text-5xl">
             How easy is your codebase for AI agents to work in?
           </h1>
@@ -130,7 +92,7 @@ export default function Page() {
 
         <section
           aria-hidden
-          className="overflow-hidden border-t border-border/60 [mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)] py-3"
+          className="overflow-hidden border-t border-border/60 py-3 [&>div]:[mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
         >
           <div className="flex w-max animate-ticker gap-8 whitespace-nowrap motion-reduce:animate-none">
             {[0, 1].map((half) => (
@@ -151,7 +113,7 @@ export default function Page() {
           </div>
         </section>
 
-        <section className="border-t border-border/60 py-12">
+        <section className="border-t border-border/60 px-6 py-12">
           <h2 className="text-sm font-medium">What gets scored</h2>
           <ul className="mt-6 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORIES.map((category) => (
@@ -164,66 +126,13 @@ export default function Page() {
                   {category.question}
                 </p>
                 <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground/60">
-                  <span className="truncate">
+                  <span className="text-pretty">
                     &ldquo;{CATEGORY_SAMPLES[category.key]}&rdquo;
                   </span>
                   <span className="shrink-0 tabular-nums">
                     {category.signals.length} signals
                   </span>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="grid border-t border-border/60 py-12 sm:grid-cols-[1fr_1.1fr] sm:gap-10">
-          <div>
-            <h2 className="text-sm font-medium">What a model actually sees</h2>
-            <p className="mt-3 max-w-md font-sans text-sm leading-relaxed text-muted-foreground">
-              A fast scan compresses the whole repository into a profile like
-              this one. If a deep scan runs, this profile, not your source tree,
-              is the main input to every model call.
-            </p>
-            <p className="mt-3 font-sans text-xs text-muted-foreground/60">
-              Illustrative example, shortened.
-            </p>
-          </div>
-          <pre className="mt-6 overflow-x-auto border border-border/60 bg-muted/40 p-4 text-xs leading-relaxed sm:mt-0">
-            {PROFILE_EXAMPLE}
-          </pre>
-        </section>
-
-        <section className="border-t border-border/60 py-12">
-          <h2 className="text-sm font-medium">
-            Parse everything, sample selectively
-          </h2>
-          <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
-            The score comes from measurable signals, not from asking a model for
-            a number. Models are used where judgement actually helps: comparing
-            sampled files, spotting patterns, and writing the recommendations.
-          </p>
-          <ul className="mt-6 grid gap-px sm:grid-cols-3">
-            {LEVELS.map((level) => (
-              <li key={level.name} className="border border-border/60 p-5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="text-xs font-medium">{level.name}</h3>
-                  <span className="text-[10px] text-muted-foreground/60 tabular-nums">
-                    {level.cost}
-                  </span>
-                </div>
-                <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
-                  {level.body}
-                </p>
-                <p className="mt-4 flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-                  <span
-                    className={
-                      level.available
-                        ? "size-1.5 bg-success"
-                        : "size-1.5 border border-border"
-                    }
-                  />
-                  {level.available ? "Available now" : "Planned"}
-                </p>
               </li>
             ))}
           </ul>

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { SiteHeader } from "@/components/site-header"
 import { AuthForm } from "@/components/auth-form"
+import { AuthBackdrop } from "@/components/auth-backdrop"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 import { DAILY_RUNS_PER_ACCOUNT } from "@/lib/quota"
 
@@ -19,7 +20,7 @@ function safeNext(value: string | string[] | undefined): string {
 const FACTS = [
   { label: "Fast scan", value: "free, no account" },
   { label: "Deep scan", value: `${DAILY_RUNS_PER_ACCOUNT} per day` },
-  { label: "Re-reading a report you ran", value: "free" },
+  { label: "Re-reading a report", value: "free" },
 ]
 
 export default async function SignInPage(props: PageProps<"/sign-in">) {
@@ -35,43 +36,31 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
     <>
       <SiteHeader account={false} />
 
-      <main className="mx-auto max-w-5xl px-6 pb-24">
-        <section className="grid gap-10 py-16 sm:grid-cols-[1fr_1fr] sm:py-24">
-          <div>
-            <h1 className="text-3xl leading-[1.1] font-medium tracking-tight text-balance sm:text-4xl">
-              {forDeepScan
-                ? "Deep scans need an account"
-                : "Sign in to GoodRepo"}
-            </h1>
-            <p className="mt-5 max-w-md font-sans text-sm leading-relaxed text-muted-foreground">
-              {forDeepScan
-                ? "A deep scan clones the commit into a throwaway sandbox and pays a model to read the code behind the signals counting alone cannot settle. An account is how that stays capped instead of open to anyone with the URL."
-                : "An account only gates the deep scan. Everything else on GoodRepo works signed out and will keep working that way."}
-            </p>
+      <main className="relative mx-auto flex min-h-[calc(100dvh-3rem)] max-w-5xl items-center justify-center overflow-hidden px-6 py-16 sm:border-x sm:border-border/60">
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black,transparent_75%)] bg-[size:32px_32px] opacity-40"
+        />
+        <AuthBackdrop />
 
-            <dl className="mt-8 max-w-md border border-border/60">
-              {FACTS.map((fact, index) => (
-                <div
-                  key={fact.label}
-                  className={
-                    index === 0
-                      ? "flex items-baseline justify-between gap-4 px-4 py-2.5"
-                      : "flex items-baseline justify-between gap-4 border-t border-border/40 px-4 py-2.5"
-                  }
-                >
-                  <dt className="text-xs text-muted-foreground">
-                    {fact.label}
-                  </dt>
-                  <dd className="text-xs tabular-nums">{fact.value}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
+        <div className="relative w-full max-w-sm">
+          <h1 className="text-2xl leading-tight font-medium tracking-tight text-balance">
+            {forDeepScan ? "Deep scans need an account" : "Sign in to GoodRepo"}
+          </h1>
 
-          <div className="sm:pt-1.5">
+          <div className="mt-8 bg-background">
             <AuthForm next={destination} github={GITHUB_SIGN_IN_ENABLED} />
           </div>
-        </section>
+
+          <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
+            {FACTS.map((fact) => (
+              <div key={fact.label} className="flex gap-1.5">
+                <dt>{fact.label}</dt>
+                <dd className="text-foreground tabular-nums">{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </main>
     </>
   )
