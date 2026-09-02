@@ -30,7 +30,8 @@
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
         "VERCEL_OIDC_TOKEN",
-        "VERCEL_PROJECT_PRODUCTION_URL"
+        "VERCEL_PROJECT_PRODUCTION_URL",
+        "SUPABASE_DATABASE_PASSWORD"
       ]
     },
     "lint": {
