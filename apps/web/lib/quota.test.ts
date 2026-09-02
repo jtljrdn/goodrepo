@@ -3,6 +3,7 @@ import {
   DAILY_RUNS_PER_ACCOUNT,
   MONTHLY_RUNS_TOTAL,
   decideClaim,
+  parseCeiling,
   type RunCounts,
 } from "./quota"
 
@@ -55,5 +56,32 @@ describe("decideClaim", () => {
 
   test("the monthly ceiling stays above a single account's month", () => {
     expect(MONTHLY_RUNS_TOTAL).toBeGreaterThan(DAILY_RUNS_PER_ACCOUNT * 31)
+  })
+})
+
+describe("parseCeiling", () => {
+  test("reads a whole count", () => {
+    expect(parseCeiling("250")).toBe(250)
+  })
+
+  test("allows zero, which is how deep scans are stopped without a deploy", () => {
+    expect(parseCeiling("0")).toBe(0)
+  })
+
+  test("falls back when unset or blank", () => {
+    expect(parseCeiling(undefined)).toBeNull()
+    expect(parseCeiling("")).toBeNull()
+    expect(parseCeiling("   ")).toBeNull()
+  })
+
+  test("falls back rather than yielding NaN, which would remove the ceiling", () => {
+    for (const bad of ["abc", "70o", "1e", "Infinity"]) {
+      expect(parseCeiling(bad)).toBeNull()
+    }
+  })
+
+  test("rejects negatives and fractions", () => {
+    expect(parseCeiling("-5")).toBeNull()
+    expect(parseCeiling("12.5")).toBeNull()
   })
 })

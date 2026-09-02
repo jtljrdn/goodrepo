@@ -2,8 +2,30 @@ import { pool } from "@/lib/db"
 
 export const DAILY_RUNS_PER_ACCOUNT: number = 5
 
-/** The spend ceiling, in runs. At RUN_COST_USD that is roughly $27 a month. */
-export const MONTHLY_RUNS_TOTAL: number = 700
+const DEFAULT_MONTHLY_RUNS = 700
+
+/**
+ * Null for unset and for anything that is not a whole count, so a typo falls back to the
+ * default instead of becoming NaN. `n >= NaN` is false, which would silently remove the
+ * ceiling altogether. Zero is allowed: it is how you stop deep scans without a deploy.
+ */
+export function parseCeiling(raw: string | undefined): number | null {
+  if (raw === undefined || raw.trim() === "") return null
+  const parsed = Number(raw)
+  if (!Number.isInteger(parsed) || parsed < 0) return null
+  return parsed
+}
+
+const configured = parseCeiling(process.env.GOODREPO_MONTHLY_DEEP_SCANS)
+
+if (configured === null && process.env.GOODREPO_MONTHLY_DEEP_SCANS) {
+  console.warn(
+    `GOODREPO_MONTHLY_DEEP_SCANS is not a whole count ("${process.env.GOODREPO_MONTHLY_DEEP_SCANS}"). Using ${DEFAULT_MONTHLY_RUNS}.`
+  )
+}
+
+/** The spend ceiling, in runs. At RUN_COST_USD the default is roughly $27 a month. */
+export const MONTHLY_RUNS_TOTAL: number = configured ?? DEFAULT_MONTHLY_RUNS
 
 export const RUN_COST_USD = 0.038
 

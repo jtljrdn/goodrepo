@@ -41,7 +41,11 @@ deep route redirects anonymous visitors to `/sign-in?next=…`, and `runDeepScan
 `userId` as a *required* argument so no future caller can spend money by forgetting a check
 that lives somewhere else. `lib/quota.ts` owns both limits: `DAILY_RUNS_PER_ACCOUNT` per
 account per rolling day, and `MONTHLY_RUNS_TOTAL` for the whole site per UTC month, which is
-the spend ceiling expressed in runs. Change the numbers there, never at a call site.
+the spend ceiling expressed in runs. The monthly one reads `GOODREPO_MONTHLY_DEEP_SCANS` so it
+can be lowered, or set to `0`, without a deploy; anything that is not a whole count falls back
+to the default with a warning, because `n >= NaN` is false and a typo would otherwise remove
+the ceiling silently. Read both from `lib/quota.ts`, never from the environment at a call
+site.
 
 A claim writes one row into `goodrepo.deep_scan_run` (see `supabase/migrations/`) *before* the
 scan starts, under a transaction-scoped advisory lock, so parallel requests cannot each read
