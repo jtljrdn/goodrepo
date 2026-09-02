@@ -1,6 +1,14 @@
+import { Suspense } from "react"
 import Link from "next/link"
+import { AccountNav } from "@/components/account-nav"
 
-export function SiteHeader({ children }: { children?: React.ReactNode }) {
+export function SiteHeader({
+  children,
+  account = true,
+}: {
+  children?: React.ReactNode
+  account?: boolean
+}) {
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-12 max-w-5xl items-center gap-3 px-6">
@@ -12,6 +20,11 @@ export function SiteHeader({ children }: { children?: React.ReactNode }) {
         </Link>
         <div className="ml-auto flex items-center gap-3 text-xs text-muted-foreground">
           {children}
+          {account ? (
+            <Suspense fallback={null}>
+              <AccountNav />
+            </Suspense>
+          ) : null}
         </div>
       </div>
     </header>

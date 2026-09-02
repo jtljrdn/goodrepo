@@ -8,11 +8,13 @@ import {
   type SignalVerdict,
 } from "@workspace/analyzer"
 import { cachedByCommit } from "@/lib/cache"
+import { claimDeepScan, type QuotaRefusal } from "@/lib/quota"
 import { resolveSha, scanAtSha } from "@/lib/scan"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
 export type DeepReport =
-  | { ok: false; failure: ScanFailure }
+  | { ok: false; refused: QuotaRefusal }
+  | { ok: false; refused: null; failure: ScanFailure }
   | {
       ok: true
       profile: RepoProfile
@@ -36,7 +38,7 @@ async function reason(
   sha: string
 ): Promise<DeepReport> {
   const base = await scanAtSha(owner, repo, sha)
-  if (!base.ok) return base
+  if (!base.ok) return { ...base, refused: null }
 
   const result = await deepScan(
     { owner, repo, revision: sha, token: process.env.GITHUB_TOKEN },
@@ -64,12 +66,17 @@ async function reason(
  */
 const deepAtSha = cachedByCommit("deep", "v1", reason)
 
+// `userId` is required so no caller can reach the sandbox without deciding who pays.
 export async function runDeepScan(
   owner: string,
-  repo: string
+  repo: string,
+  userId: string
 ): Promise<DeepReport> {
   const sha = await resolveSha(owner, repo)
-  if (isFailure(sha)) return { ok: false, failure: sha }
+  if (isFailure(sha)) return { ok: false, refused: null, failure: sha }
+
+  const claim = await claimDeepScan(userId, owner, repo, sha)
+  if (!claim.allowed) return { ok: false, refused: claim.reason }
 
   try {
     return await deepAtSha(owner, repo, sha)
@@ -78,7 +85,7 @@ export async function runDeepScan(
     // rather than erroring.
     console.error(`Deep scan failed for ${owner}/${repo}@${sha}`, error)
     const base = await scanAtSha(owner, repo, sha)
-    if (!base.ok) return base
+    if (!base.ok) return { ...base, refused: null }
     return {
       ...base,
       asked: unresolvedSignals(base.profile),

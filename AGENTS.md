@@ -10,7 +10,10 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 
 ### Entry points
 
-- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report and `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in. There are no API routes; scanning happens in server components.
+- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report and `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in. Scanning happens in server components, not API routes; the only route handler is
+`app/api/auth/[...all]/route.ts`, which Better Auth owns. `app/sign-in/page.tsx` is the one
+account surface: sign in and create account share a form, and it is where the deep route sends
+anonymous visitors.
 - `packages/analyzer` — the scan engine. `src/index.ts` exports `analyze()` plus the GitHub fetch helpers; `src/detect/*` holds one deterministic detector per signal family; `src/source/github.ts` is the only code that talks to the GitHub API.
 - `packages/ui` — shared React components, Tailwind styles and the design tokens in `src/styles/globals.css`.
 - `packages/eslint-config`, `packages/typescript-config` — shared config only, no runtime code.
@@ -26,12 +29,35 @@ that cannot finish throws rather than returning, so the failure is not cached an
 degrades to the static report.
 
 **Deep scans are off by default.** `DEEP_SCAN_ENABLED` in `lib/flags.ts` reads
-`GOODREPO_DEEP_SCAN`, and while it is false the route 404s and the button does not render.
-Nothing an anonymous visitor can reach may start a scan that pays a model, and accounts and
-billing do not exist yet. Set `GOODREPO_DEEP_SCAN=1` in the root `.env.local` to work on it,
-and delete the flag once accounts gate the route. The route is also `noindex` and its link is
-`prefetch={false}`. Note that the disabled route answers `200` with the 404 page rather than a
-`404` status, because the partial-prerender shell is flushed before `notFound()` runs.
+`GOODREPO_DEEP_SCAN`, and while it is false the route 404s and the button does not render. Set
+`GOODREPO_DEEP_SCAN=1` in the root `.env.local` to work on it. Keep the flag: it is the master
+kill switch, and it is the only thing that stops a deep scan without a database round trip. The
+route is also `noindex` and its link is `prefetch={false}`. Note that the disabled route answers
+`200` with the 404 page rather than a `404` status, because the partial-prerender shell is
+flushed before `notFound()` runs.
+
+**Nothing reaches the sandbox without a signed-in account and a claimed quota slot.** The
+deep route redirects anonymous visitors to `/sign-in?next=…`, and `runDeepScan` takes a
+`userId` as a *required* argument so no future caller can spend money by forgetting a check
+that lives somewhere else. `lib/quota.ts` owns both limits: `DAILY_RUNS_PER_ACCOUNT` per
+account per rolling day, and `MONTHLY_RUNS_TOTAL` for the whole site per UTC month, which is
+the spend ceiling expressed in runs. Change the numbers there, never at a call site.
+
+A claim writes one row into `goodrepo.deep_scan_run` (see `supabase/migrations/`) *before* the
+scan starts, under a transaction-scoped advisory lock, so parallel requests cannot each read
+the same count and each decide they are under the cap. The unique constraint on
+`(user_id, owner, repo, commit_sha)` is what makes re-reading a report you already ran free.
+`decideClaim` is the pure half and is unit tested; the SQL only feeds it counts. Deleting an
+account nulls its rows rather than removing them, so the month's spend cannot be reset by
+deleting a user.
+
+**App tables go in the `goodrepo` schema, not `public`.** `public` is what Supabase exposes
+through PostgREST, and this project's default privileges there grant `anon` and `authenticated`
+full rights on every new table, leaving RLS as the only thing between the publishable key and
+the data. Nothing in this app is read through the Data API; it connects directly as `postgres`.
+So new tables belong in `goodrepo`, fully qualified at every call site, with RLS enabled as
+belt and braces. Do not add them to `better_auth` either: that schema belongs to Better Auth's
+CLI.
 
 Both scans cache by commit through `cachedByCommit` in `lib/cache.ts`, which wraps
 `unstable_cache`. **Do not replace it with `use cache`.** Next composes its cache key from the
@@ -96,6 +122,13 @@ files, symlinks, or custom env launchers.
 
 Prefer `.env.local`, generated at the root by `vercel env pull .env.local`.
 Developers not using Vercel can copy `.env.example` to `.env.local` and fill it
-in. Only `GITHUB_TOKEN` is used, and only to raise the GitHub API rate limit;
-scans of public repositories work without it. A root `.env` is supported as a
-lower priority fallback but is not required.
+in. A root `.env` is supported as a lower priority fallback but is not required.
+
+`GITHUB_TOKEN` only raises the GitHub API rate limit; fast scans of public
+repositories work without it. `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and
+`DATABASE_URL` are needed for anything behind sign-in, which today means only the
+deep scan. `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are a GitHub OAuth app,
+unrelated to `GITHUB_TOKEN`; both must be present or `lib/auth.ts` registers no
+social provider and the button does not render, which is how a checkout without
+them still runs. Every one of these is declared in `turbo.json`'s task `env`
+lists as well, or Turbo caches across values that should have busted it.
