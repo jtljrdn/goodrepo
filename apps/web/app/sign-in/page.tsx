@@ -10,7 +10,6 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-// Only ever a path on this site: an open redirect makes the domain a springboard.
 function safeNext(value: string | string[] | undefined): string {
   if (typeof value !== "string") return "/"
   if (!value.startsWith("/") || value.startsWith("//")) return "/"

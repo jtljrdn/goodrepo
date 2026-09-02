@@ -20,8 +20,6 @@ export type Checkout = {
 
 export class CheckoutError extends Error {}
 
-// `git ls-tree -r --long HEAD` emits "<mode> <type> <sha> <size>\t<path>", size right-aligned.
-// Submodules come back as type "commit" with a size of "-", so filtering to blobs drops them.
 export function parseLsTree(output: string): TreeEntry[] {
   const entries: TreeEntry[] = []
   for (const line of output.split("\n")) {
@@ -46,7 +44,6 @@ function gitSource(target: CheckoutTarget) {
     depth: 1,
     revision: target.revision,
   }
-  // GitHub accepts any username when the password is a token.
   return target.token
     ? { ...base, username: "x-access-token", password: target.token }
     : base

@@ -14,7 +14,6 @@ export const auth = betterAuth({
   database: pool,
   emailAndPassword: { enabled: true },
   socialProviders: github ? { github } : {},
-  // nextCookies() must stay last so it can set the cookies every other plugin queued.
   plugins: [nextCookies()],
 })
 

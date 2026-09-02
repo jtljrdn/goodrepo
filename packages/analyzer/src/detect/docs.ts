@@ -50,8 +50,6 @@ export function detectDocs(facts: RawFacts, packageManager: string | null) {
   const readme = get(facts, "readme.md")
   const agents = get(facts, "agents.md")
   const claude = get(facts, "claude.md")
-  // CONTRIBUTING.md is where most repos document commands. It counts for the command
-  // and section signals, but never toward the README word count.
   const contributing = get(facts, "contributing.md")
   const all = `${readme}\n${agents}\n${claude}\n${contributing}`
   const allHeadings = [

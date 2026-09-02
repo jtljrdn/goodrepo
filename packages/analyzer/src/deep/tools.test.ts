@@ -47,8 +47,6 @@ const files = {
 }
 
 test("every way the model spells the repository root means the root", () => {
-  // The literal two-character string `""` is what actually broke the audit: the model read
-  // "empty string lists everything" and sent quote marks.
   for (const root of ["", '""', "''", ".", "./", "/", " . ", null, undefined]) {
     expect(toPrefix(root)).toBe("")
   }

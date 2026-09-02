@@ -45,8 +45,6 @@ test("every agent signal states both the question and what to look for", () => {
 })
 
 test("a zero static route count does not withhold the routing question", () => {
-  // honojs/hono reports apiRoutes=0 under the static heuristic and is still an HTTP framework
-  // the agent judged consistent. Static absence is not evidence of absence here.
   const profile = {
     ...profileWith({ consistentRouteShape: null }),
     apiRoutes: 0,

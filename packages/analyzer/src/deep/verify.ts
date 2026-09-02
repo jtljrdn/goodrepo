@@ -5,8 +5,6 @@ export type RejectedFinding = { finding: DeepFinding; reason: string }
 
 export type Verification = { kept: DeepFinding[]; dropped: RejectedFinding[] }
 
-// The model reflows whitespace when it quotes, so compare on collapsed whitespace rather
-// than byte-for-byte. Anything looser would stop being evidence.
 export function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim()
 }
@@ -23,15 +21,6 @@ export function directoriesOf(paths: string[]): Set<string> {
   return dirs
 }
 
-/**
- * Returns null when the finding stands, or the reason it does not.
- *
- * A finding survives only if the repository itself can settle it: the document it accuses
- * is in the checkout, the quote really appears there, and whatever the agent checked to
- * disprove the claim is in the checkout too. That last test is the important one. It is
- * what stops the agent asserting something about an installed dependency, a build output,
- * or any other path a shallow clone never contains.
- */
 export function checkFinding(
   finding: DeepFinding,
   files: Set<string>,

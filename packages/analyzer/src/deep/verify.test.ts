@@ -60,8 +60,6 @@ test("a directory is an acceptable thing to have checked", () => {
 })
 
 test("a claim checked against something outside the checkout is dropped", () => {
-  // The real false positive: next/dist/docs does exist, but a shallow clone has no
-  // node_modules, so the agent concluded absence from a directory it cannot see.
   const bogus = finding({
     title: "AGENTS.md instructs agent to read nonexistent Next.js docs path",
     path: "AGENTS.md",

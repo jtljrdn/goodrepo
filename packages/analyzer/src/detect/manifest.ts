@@ -43,8 +43,6 @@ export function readScripts(
   return out
 }
 
-// Script names vary by repo: `typecheck`, `type-check`, `test:types`, `check-types`.
-// Match the name by pattern first, then fall back to what the command actually runs.
 function hasScript(
   scripts: Record<string, string>,
   name: RegExp,

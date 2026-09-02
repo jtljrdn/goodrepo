@@ -7,24 +7,8 @@ import { checkoutTools, type ToolCall } from "./tools"
 
 const MODEL = process.env.GOODREPO_MODEL ?? "anthropic/claude-sonnet-5"
 
-/**
- * The static pass answers 34 to 37 of the 40 signals on a typical repository. These are the
- * ones it leaves open, and the only reason the model is here. Everything else is already known
- * by the time this runs, so nothing should be spent re-deriving it.
- */
 export type AgentSignal = { question: string; lookFor: string }
 
-/**
- * `singleValidationLib` is deliberately absent.
- *
- * It was measured three ways over nine runs of the same commit and never settled: roughly
- * three answers to one against, whichever way the question was worded, including an explicit
- * invitation to answer "undeterminable" on borderline repositories. It is worth 20 of the 100
- * points in its category, so a quarter of runs disagreeing moves the visible score, and a
- * score that will not reproduce is worse than a signal left unmeasured. It stays null and the
- * scorer excludes it. Restore it here if a question is found that a reader answers the same
- * way twice.
- */
 export const AGENT_SIGNALS: Partial<Record<SignalId, AgentSignal>> = {
   consistentRouteShape: {
     question: "How are this repository's HTTP handlers written?",
@@ -76,29 +60,12 @@ type VerdictBody = z.infer<typeof Verdict>
 
 export type SignalVerdict = VerdictBody & { signal: string }
 
-/**
- * Turns what the agent saw into a pass or fail.
- *
- * The model reports the distinct patterns it found and how far each reaches; the cutoff is
- * applied here, in code. Asking the model "is this consistent?" made it draw the line, and it
- * drew it differently on different runs of the same commit. Two runs that see the same
- * patterns now reach the same verdict even when they would have judged differently.
- */
 export function judgeConsistency(verdict: VerdictBody): boolean | null {
   if (!verdict.applicable || verdict.patterns.length === 0) return null
   if (verdict.patterns.length === 1) return true
-  // Several ways of doing it is still consistent when one of them clearly dominates and the
-  // rest are stragglers. Two competing mainstream patterns is not.
   return verdict.patterns.filter((p) => p.reach === "most").length === 1
 }
 
-/**
- * One required key per open signal, rather than a free array.
- *
- * With an array the model could return an empty one and the whole run produced nothing,
- * which is what happened on small repositories. A keyed object makes omitting an answer
- * structurally impossible: the schema itself will not validate without every signal present.
- */
 function schemaFor(
   signals: SignalId[]
 ): z.ZodType<Record<string, VerdictBody>> {
@@ -117,25 +84,12 @@ export type SignalResolution =
     }
   | { ok: false; reason: string }
 
-/**
- * The signals the static pass left open.
- *
- * Deliberately not filtered by static counts. `apiRoutes` looked like a way to skip
- * `consistentRouteShape` on repositories with no routes, but honojs/hono reports zero routes
- * under that heuristic while being an HTTP framework whose handlers the agent judged
- * consistent, twice, unanimously. A detector finding nothing is not the same as there being
- * nothing, and only the agent can tell those apart here.
- */
 export function unresolvedSignals(profile: RepoProfile): SignalId[] {
   return (Object.keys(AGENT_SIGNALS) as SignalId[]).filter(
     (id) => profile.has[id] === null
   )
 }
 
-/**
- * What the static pass already knows, handed over so the agent does not spend tool calls
- * rediscovering the shape of the repository before it can start answering anything.
- */
 export function repoBrief(profile: RepoProfile, checkout: Checkout): string {
   const dirs = new Map<string, number>()
   for (const entry of checkout.entries) {
@@ -209,11 +163,6 @@ export type Partitioned = {
   unmatched: SignalVerdict[]
 }
 
-/**
- * Sorts the model's answers into the ones we can act on and the ones we cannot, without ever
- * discarding one silently. An answer is only actionable if it was asked for, has not already
- * been given, and rests on files that are actually in the checkout.
- */
 export function partitionVerdicts(
   raw: SignalVerdict[],
   asked: SignalId[],
@@ -230,8 +179,6 @@ export function partitionVerdicts(
       continue
     }
     seen.add(verdict.signal)
-    // A repository with nothing of the kind needs no files to prove it. Anything else has to
-    // point at real ones: every pattern claimed must come with a file that exists here.
     const grounded = !verdict.applicable
       ? true
       : verdict.patterns.length > 0 &&
@@ -274,8 +221,6 @@ export async function resolveSignals(
       ].join("\n"),
     })
 
-    // The agent's output is typed loosely because the schema is built per call, so parse it
-    // back through the same schema to get something typed rather than asserting.
     const parsed = schemaFor(signals).safeParse(result.output)
     if (!parsed.success) {
       return {

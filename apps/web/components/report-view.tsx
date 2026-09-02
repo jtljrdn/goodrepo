@@ -82,15 +82,11 @@ export function ReportView({
   deep?: DeepDetail | null
 }) {
   const recommendations = recommend(profile, categories)
-  // A deep scan that could not finish leaves a fast report behind, so it must not be
-  // described as one that read the source.
   const ran = deep !== null && deep.unfinished === null ? deep : null
   const signals = categories.flatMap((category) => category.signals)
   const measured = signals.filter(
     (signal) => signal.status !== "not-measured"
   ).length
-  // Once a deep scan has run, nothing is pending: every signal it could answer was asked, and
-  // the ones still unscored are the ones it looked for and did not find.
   const pending = ran
     ? 0
     : signals.filter(

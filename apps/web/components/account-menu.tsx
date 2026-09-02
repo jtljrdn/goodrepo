@@ -12,7 +12,6 @@ import {
 } from "@workspace/ui/components/avatar"
 import { authClient } from "@/lib/auth-client"
 
-// Square, to match the wordmark tile: the world has no radius.
 const TILE = "rounded-none after:rounded-none"
 
 export function AccountMenu({

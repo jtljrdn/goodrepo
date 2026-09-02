@@ -20,18 +20,11 @@ export type DeepReport =
       profile: RepoProfile
       overall: number | null
       categories: ScoredCategory[]
-      /** The signals the static pass left open, in the order they were asked about. */
       asked: SignalId[]
-      /** What the agent observed. Empty when it could not finish. */
       verdicts: SignalVerdict[]
-      /** Set when the agent ran but could not finish, in which case this is the static report. */
       unfinished: string | null
     }
 
-/**
- * A run that could not finish throws rather than returning, so one bad sandbox or one
- * unreachable gateway is never written into the cache for the life of the commit.
- */
 async function reason(
   owner: string,
   repo: string,
@@ -60,13 +53,8 @@ async function reason(
   }
 }
 
-/**
- * Cached per commit, because the same commit produces the same answers and the model is
- * essentially the whole cost of a deep scan.
- */
 const deepAtSha = cachedByCommit("deep", "v1", reason)
 
-// `userId` is required so no caller can reach the sandbox without deciding who pays.
 export async function runDeepScan(
   owner: string,
   repo: string,
@@ -81,8 +69,6 @@ export async function runDeepScan(
   try {
     return await deepAtSha(owner, repo, sha)
   } catch (error) {
-    // The static profile is still valid and still worth showing, so the page degrades to it
-    // rather than erroring.
     console.error(`Deep scan failed for ${owner}/${repo}@${sha}`, error)
     const base = await scanAtSha(owner, repo, sha)
     if (!base.ok) return { ...base, refused: null }

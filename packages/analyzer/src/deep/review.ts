@@ -98,11 +98,6 @@ const schema = z.object({
 
 export type DeepFinding = z.infer<typeof Finding>
 
-/**
- * Running out of tool calls used to lose the whole run: the agent explored into the cap and
- * returned nothing at all. Past this point its tools are taken away, so the only thing left
- * to do is write up what it already found.
- */
 export function shouldLand(
   stepNumber: number,
   maxSteps: number,
@@ -127,8 +122,6 @@ export async function deepReview(
 ): Promise<DeepReview> {
   const agent = new ToolLoopAgent({
     model: MODEL,
-    // The instructions and the tool definitions are identical on every step, so caching
-    // them keeps the stable head of the prefix off the per-step bill.
     instructions: {
       role: "system",
       content: instructions(CAPS.deepMaxSteps),
@@ -140,9 +133,6 @@ export async function deepReview(
       shouldLand(stepNumber, CAPS.deepMaxSteps, CAPS.deepLandingSteps)
         ? { activeTools: [] }
         : {},
-    // Anthropic needs explicit cache_control markers. The Gateway places them for us:
-    // one on the last message so each request extends the previous one's cache, and one
-    // further back so a request whose tail changed still reads a stable prefix.
     providerOptions: { gateway: { caching: "auto" } },
     output: Output.object({ schema }),
   })

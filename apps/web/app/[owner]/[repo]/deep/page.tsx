@@ -29,7 +29,6 @@ export async function generateMetadata(
   const { owner, repo } = await props.params
   return {
     title: `${owner}/${repo} · deep scan`,
-    // A deep scan costs real money to produce, so it is not something crawlers should walk into.
     robots: { index: false, follow: false },
   }
 }
@@ -37,7 +36,6 @@ export async function generateMetadata(
 export default async function DeepReportPage(
   props: PageProps<"/[owner]/[repo]/deep">
 ) {
-  // Guessing the URL must not be a way to spend money on a scan nobody paid for.
   if (!DEEP_SCAN_ENABLED) notFound()
 
   const { owner, repo } = await props.params

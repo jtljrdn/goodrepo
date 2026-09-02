@@ -6,7 +6,6 @@ import { currentSession } from "@/lib/auth"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { DAILY_RUNS_PER_ACCOUNT } from "@/lib/quota"
 
-// Full-height cell, flush to the container edge: the header's last column.
 const CELL =
   "-mr-6 flex h-12 items-center self-stretch border-l border-border pr-6 pl-4"
 

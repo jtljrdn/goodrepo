@@ -62,8 +62,6 @@ export function failureMessage(failure: ScanFailure): {
   }
 }
 
-// A rate limit is a fact about this minute, not about this commit, so it is thrown rather than
-// returned: a thrown error is never written to the cache.
 function reject(failure: ScanFailure): ScanResult {
   if (failure.kind === "rate-limited") throw new Error(TRANSIENT)
   return { ok: false, failure }
@@ -137,11 +135,6 @@ export async function scanAtSha(
 
 const COMMIT_SHA = /^[0-9a-f]{40}$/
 
-/**
- * Always a real commit. A pinned example may name a branch, and caching against a branch name
- * would freeze that report for the life of the entry, so anything that is not already a full
- * SHA is resolved through GitHub first.
- */
 export async function resolveSha(
   owner: string,
   repo: string

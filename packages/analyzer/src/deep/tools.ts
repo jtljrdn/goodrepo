@@ -3,17 +3,12 @@ import { z } from "zod"
 import type { Checkout } from "../sandbox"
 import { CAPS } from "../thresholds"
 
-// The agent picks these paths, so they are untrusted input. Everything must stay
-// inside the checkout: no absolute paths, no traversal out of the working tree.
 export function isSafePath(path: string): boolean {
   if (path.length === 0 || path.startsWith("/") || path.startsWith("~"))
     return false
   return !path.split("/").includes("..")
 }
 
-// The model reaches this with whatever it thinks "the root" looks like: an empty string, a
-// literal pair of quote characters, ".", "./", or "/". They all mean the same thing, and
-// getting it wrong returns an empty repository, which the model reads as "nothing to audit".
 export function toPrefix(directory: string | null | undefined): string {
   const cleaned = (directory ?? "")
     .trim()
@@ -97,7 +92,6 @@ export function checkoutTools(
           "-e",
           pattern,
         ])
-        // git grep exits 1 when nothing matched, which is not an error here.
         if (result.exitCode > 1)
           return { error: `Could not search for ${pattern}.` }
         const lines = result.stdout.split("\n").filter(Boolean)

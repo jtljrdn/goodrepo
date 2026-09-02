@@ -1,6 +1,5 @@
 import { CAPS } from "./thresholds"
 
-// "build" and "out" are omitted on purpose: both are commonly source directories.
 export const GENERATED_DIRS = [
   "dist",
   ".next",

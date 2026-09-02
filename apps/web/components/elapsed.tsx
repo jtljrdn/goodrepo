@@ -2,7 +2,6 @@
 
 import * as React from "react"
 
-/** Honest feedback during a wait long enough that a static spinner reads as a hang. */
 export function Elapsed() {
   const [seconds, setSeconds] = React.useState(0)
 

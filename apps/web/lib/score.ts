@@ -373,11 +373,6 @@ export type SignalStatus = "pass" | "fail" | "not-measured"
 
 const EMPTY: ReadonlySet<SignalId> = new Set()
 
-/**
- * The signals only a deep scan can settle. Taken from the analyzer's own registry so the two
- * cannot drift: a signal added to or removed from the agent's question set changes this set
- * with it.
- */
 export const DEEP_SCAN_ONLY: ReadonlySet<SignalId> = new Set(
   Object.keys(AGENT_SIGNALS) as SignalId[]
 )
@@ -418,8 +413,6 @@ export function scoreCategory(
   const signals: ScoredSignal[] = def.signals.map((sig) => {
     const value = p.has[sig.id]
     if (value === null || value === undefined) {
-      // A deep scan that looked and found nothing of the kind is a different answer from one
-      // that has not run yet, even though both leave the signal unscored.
       const reason = answered.has(sig.id)
         ? "nothing of this kind in this repository"
         : DEEP_SCAN_ONLY.has(sig.id)
@@ -460,10 +453,6 @@ export function scoreCategory(
   }
 }
 
-/**
- * `answered` names the signals a deep scan reported on. It changes nothing about the arithmetic
- * and only sharpens the wording for the ones it reported as not applicable.
- */
 export function scoreRepo(
   p: RepoProfile,
   answered: ReadonlySet<SignalId> = EMPTY

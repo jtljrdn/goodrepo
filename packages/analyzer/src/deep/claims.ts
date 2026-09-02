@@ -94,8 +94,6 @@ export async function extractClaims(checkout: Checkout): Promise<ClaimSet> {
     return { ok: false, reason: "The documentation could not be read." }
 
   try {
-    // No tools here on purpose. This is a bounded reading task over a few kilobytes of prose,
-    // and giving it a repository to explore is what made coverage a matter of luck.
     const { output } = await generateText({
       model: MODEL,
       instructions: INSTRUCTIONS,
