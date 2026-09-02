@@ -64,22 +64,23 @@ export const CATEGORIES: CategoryDef[] = [
         (p) =>
           `README covers the project in depth (${p.docs.readmeWords} words)`,
         (p) =>
-          `README is thin (${p.docs.readmeWords} words) — mostly a title and install line`
+          `README is thin (${p.docs.readmeWords} words), mostly a title and install line`
       ),
       s(
         "predictableRoot",
         15,
-        "Source under one predictable root",
-        "Source lives under a single predictable root",
-        "Source is split across several unrelated top-level folders"
+        "Source under predictable roots",
+        "Source lives under folders an agent can guess (src, app, lib, workspaces)",
+        "Source is split across top-level folders an agent has to discover"
       ),
       s(
         "shallowTree",
         15,
         "Directory depth",
         (p) =>
-          `Directory tree stays shallow (max depth ${p.maxDirectoryDepth})`,
-        (p) => `Directory tree is deep (max depth ${p.maxDirectoryDepth})`
+          `Directory tree stays shallow (9 in 10 files within ${p.measurements.shallowTree?.value ?? p.maxDirectoryDepth} levels)`,
+        (p) =>
+          `Directory tree is deep (9 in 10 files need ${p.measurements.shallowTree?.value ?? p.maxDirectoryDepth} levels)`
       ),
       s(
         "colocatedTests",
@@ -109,7 +110,13 @@ export const CATEGORIES: CategoryDef[] = [
         (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`,
         "No AGENTS.md"
       ),
-      s("claudeMd", 5, "CLAUDE.md", "CLAUDE.md present", "No CLAUDE.md"),
+      s(
+        "claudeMd",
+        5,
+        "Tool-specific instructions",
+        "Tool-specific instructions present (CLAUDE.md, Cursor rules or similar)",
+        "No tool-specific instruction file (CLAUDE.md, Cursor rules or similar)"
+      ),
       s(
         "docPackageManager",
         10,
@@ -176,9 +183,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "testConfig",
         15,
-        "Test framework config",
-        (p) => `Test framework config detected (${p.testFramework})`,
-        "No test framework config detected"
+        "Test framework",
+        (p) => `Test framework detected (${p.testFramework})`,
+        "No test framework detected in config or the test script"
       ),
       s(
         "testsExist",
@@ -242,8 +249,8 @@ export const CATEGORIES: CategoryDef[] = [
         "consistentNaming",
         15,
         "Uniform file naming",
-        "File and export naming is uniform",
-        "File naming mixes conventions"
+        "Files in each folder follow one naming convention",
+        "Folders mix naming conventions, so an agent cannot guess a file name"
       ),
       s(
         "singleDataLayer",
@@ -362,8 +369,8 @@ export const CATEGORIES: CategoryDef[] = [
         "lowFanout",
         20,
         "Change fan-out across modules",
-        "Common changes stay inside one module",
-        "Common changes touch many modules at once"
+        "A typical file reaches into few other folders",
+        "A typical file reaches into many other folders, so one change pulls in a lot of context"
       ),
     ],
   },

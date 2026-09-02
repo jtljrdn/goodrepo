@@ -175,3 +175,21 @@ test("measurements accompany every thresholded signal", () => {
     expect(profile.measurements[id], id).toBeDefined()
   }
 })
+
+test("checks that need a database, several routes or tests are skipped when the repo has none", () => {
+  const profile = run([
+    file("package.json", JSON.stringify({ scripts: { build: "tsc" } })),
+    file("README.md", "# Lib\n\nrun `npm run build`"),
+    file("src/index.ts", "export const a = 1"),
+    file("app/api/auth/[...all]/route.ts", "export const GET = () => null"),
+  ])
+  expect(profile.language).toBe("TypeScript")
+  expect(profile.has.docDatabase).toBeNull()
+  expect(profile.has.docApiConventions).toBeNull()
+  expect(profile.has.singleTestDocumented).toBeNull()
+  expect(profile.has.coverage).toBeNull()
+  expect(profile.has.ciRunsTests).toBeNull()
+  expect(profile.has.envExample).toBeNull()
+  expect(profile.has.docBuildCommand).toBe(true)
+  expect(profile.has.testScript).toBe(false)
+})

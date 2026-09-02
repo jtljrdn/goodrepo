@@ -23,6 +23,26 @@ const SINGLE_TEST = [
   /\b(vitest|jest)\b[^\n`]*\s(-t|--testNamePattern)\s/,
 ]
 
+const TOOL_INSTRUCTIONS = [
+  /^claude\.md$/,
+  /^gemini\.md$/,
+  /^\.cursorrules$/,
+  /^\.cursor\/rules(\/|$)/,
+  /^\.windsurfrules$/,
+  /^\.clinerules$/,
+  /^\.github\/copilot-instructions\.md$/,
+]
+
+export type DocApplies = {
+  packageManager: string | null
+  tests: boolean
+  testScript: boolean
+  buildScript: boolean
+  devScript: boolean
+  database: boolean
+  api: boolean
+}
+
 function words(text: string): number {
   const stripped = text.replace(/```[\s\S]*?```/g, " ")
   const matched = stripped.match(/[A-Za-z0-9][A-Za-z0-9'-]*/g)
@@ -46,7 +66,7 @@ function get(facts: RawFacts, name: string): string {
   return ""
 }
 
-export function detectDocs(facts: RawFacts, packageManager: string | null) {
+export function detectDocs(facts: RawFacts, applies: DocApplies) {
   const readme = get(facts, "readme.md")
   const agents = get(facts, "agents.md")
   const claude = get(facts, "claude.md")
@@ -64,8 +84,11 @@ export function detectDocs(facts: RawFacts, packageManager: string | null) {
   ).map((s) => s.key)
   const has = (key: string) => sections.includes(key)
 
-  const managerName = /^[a-z]+/.exec(packageManager ?? "")?.[0] ?? ""
+  const managerName = /^[a-z]+/.exec(applies.packageManager ?? "")?.[0] ?? ""
   const readmeWords = words(readme)
+
+  const buildMentioned = /\brun\s+build\b|\bbuild\b/.test(all)
+  const devMentioned = /\brun\s+dev\b|\bdev\b/.test(all)
 
   return {
     readmeWords,
@@ -73,20 +96,32 @@ export function detectDocs(facts: RawFacts, packageManager: string | null) {
     sections,
     has: {
       readme: readme.length > 0,
-      readmeDepth: readme.length > 0 && passes("readmeWords", readmeWords),
+      readmeDepth:
+        readme.length > 0 ? passes("readmeWords", readmeWords) : null,
       agentsMd: agents.length > 0,
-      claudeMd: claude.length > 0,
+      claudeMd: facts.paths.some((p) =>
+        TOOL_INSTRUCTIONS.some((re) => re.test(p.toLowerCase()))
+      ),
       docPackageManager:
-        managerName.length > 0 && new RegExp(`\\b${managerName}\\b`).test(all),
-      docTestCommand: /\b(run\s+)?test\b/.test(all) || has("testing"),
+        managerName.length > 0
+          ? new RegExp(`\\b${managerName}\\b`).test(all)
+          : null,
+      docTestCommand:
+        applies.testScript || applies.tests
+          ? /\b(run\s+)?test\b/.test(all) || has("testing")
+          : null,
       docBuildCommand:
-        /\brun\s+build\b|\bbuild\b/.test(all) &&
-        /\brun\s+dev\b|\bdev\b/.test(all),
+        !applies.buildScript && !applies.devScript
+          ? null
+          : (!applies.buildScript || buildMentioned) &&
+            (!applies.devScript || devMentioned),
       docArchitecture: has("architecture"),
-      docDatabase: has("database"),
-      docApiConventions: has("api"),
+      docDatabase: applies.database ? has("database") : null,
+      docApiConventions: applies.api ? has("api") : null,
       docCodeStyle: has("conventions"),
-      singleTestDocumented: SINGLE_TEST.some((re) => re.test(all)),
+      singleTestDocumented: applies.tests
+        ? SINGLE_TEST.some((re) => re.test(all))
+        : null,
     },
   }
 }

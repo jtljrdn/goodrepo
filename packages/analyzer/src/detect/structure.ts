@@ -19,6 +19,28 @@ const TYPE_NAMES = new Set([
   "styles",
 ])
 
+// Top-level folders an agent can guess without listing the tree.
+const PREDICTABLE_ROOTS = new Set([
+  "src",
+  "app",
+  "pages",
+  "components",
+  "lib",
+  "hooks",
+  "utils",
+  "server",
+  "api",
+  "routes",
+  "styles",
+  "types",
+  "test",
+  "tests",
+  "__tests__",
+  "e2e",
+  "scripts",
+  "bin",
+])
+
 const SOURCE_ROOTS = ["src", "app", "lib", "apps", "packages"]
 
 function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
@@ -46,6 +68,13 @@ function stem(path: string): string {
     .replace(/\.[cm]?[jt]sx?$/, "")
 }
 
+function percentile(values: number[], share: number): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const index = Math.max(0, Math.ceil(share * sorted.length) - 1)
+  return sorted[index] ?? 0
+}
+
 function primarySourceRoot(codePaths: string[]): string {
   const counts = new Map<string, number>()
   for (const path of codePaths) {
@@ -65,21 +94,24 @@ function primarySourceRoot(codePaths: string[]): string {
   return best
 }
 
-export function detectStructure(facts: RawFacts) {
+export function detectStructure(facts: RawFacts, workspaceRoots: string[]) {
   const codePaths = facts.codeFiles.map((f) => f.path)
   const measurements: Partial<Record<SignalId, Measurement>> = {}
 
-  const counts = new Map<string, number>()
-  for (const path of codePaths) {
-    const top = topLevel(path)
-    if (top) counts.set(top, (counts.get(top) ?? 0) + 1)
-  }
-  const largestRoot = Math.max(0, ...counts.values())
-  const rootShare = codePaths.length > 0 ? largestRoot / codePaths.length : 0
+  const nested = codePaths.filter((p) => p.includes("/"))
+  const predictable = nested.filter((p) => {
+    const top = topLevel(p)
+    return PREDICTABLE_ROOTS.has(top) || workspaceRoots.includes(top)
+  }).length
+  const rootShare = nested.length > 0 ? predictable / nested.length : 1
   measurements.predictableRoot = measure("rootConcentration", rootShare)
 
-  const maxDepth = Math.max(0, ...facts.paths.map((p) => p.split("/").length))
-  measurements.shallowTree = measure("maxDepth", maxDepth)
+  // ponytail: p90 rather than max, so one deep fixture folder cannot fail a repo
+  const depth = percentile(
+    facts.paths.map((p) => p.split("/").length),
+    0.9
+  )
+  measurements.shallowTree = measure("maxDepth", depth)
 
   const testPaths = facts.paths.filter(isTestFile)
   const sourceKeys = new Set(
@@ -112,13 +144,16 @@ export function detectStructure(facts: RawFacts) {
   measurements.featureFolders = measure("typeNamedFolders", typeShare)
 
   return {
-    maxDirectoryDepth: maxDepth,
+    maxDirectoryDepth: Math.max(
+      0,
+      ...facts.paths.map((p) => p.split("/").length)
+    ),
     directories: new Set(facts.paths.map(dirOf).filter(Boolean)).size,
     measurements,
     has: {
       predictableRoot:
         codePaths.length > 0 ? passes("rootConcentration", rootShare) : null,
-      shallowTree: facts.paths.length > 0 ? passes("maxDepth", maxDepth) : null,
+      shallowTree: facts.paths.length > 0 ? passes("maxDepth", depth) : null,
       colocatedTests:
         testPaths.length > 0 ? passes("testColocation", colocationShare) : null,
       generatedExcluded: !facts.paths.some((p) =>

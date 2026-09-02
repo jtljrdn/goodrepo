@@ -54,24 +54,64 @@ test("no validation library at all is not applicable, not a failure", () => {
 
 test("fails singleDataLayer when UI files import the database directly", () => {
   const result = detectImports(
-    facts([
-      ["src/components/a.tsx", ["drizzle-orm"]],
-      ["src/components/b.tsx", ["drizzle-orm"]],
-      ["src/components/c.tsx", ["react"]],
-    ])
+    withDeps(
+      [
+        ["src/components/a.tsx", ["drizzle-orm"]],
+        ["src/components/b.tsx", ["drizzle-orm"]],
+        ["src/components/c.tsx", ["react"]],
+      ],
+      ["drizzle-orm"]
+    )
   )
   expect(result.has.singleDataLayer).toBe(false)
 })
 
 test("passes singleDataLayer when only the data layer touches the database", () => {
   const result = detectImports(
-    facts([
-      ["src/db/client.ts", ["drizzle-orm"]],
-      ["src/components/a.tsx", ["react"]],
-      ["src/components/b.tsx", ["react"]],
-    ])
+    withDeps(
+      [
+        ["src/db/client.ts", ["drizzle-orm"]],
+        ["src/components/a.tsx", ["react"]],
+        ["src/components/b.tsx", ["react"]],
+      ],
+      ["drizzle-orm"]
+    )
   )
   expect(result.has.singleDataLayer).toBe(true)
+})
+
+test("singleDataLayer does not apply without a database library", () => {
+  const result = detectImports(
+    withDeps([["src/components/a.tsx", ["react"]]], ["react"])
+  )
+  expect(result.has.singleDataLayer).toBeNull()
+  expect(result.usesDatabase).toBe(false)
+})
+
+test("a database is recognised from dependencies or from migration paths", () => {
+  expect(detectImports(withDeps([["a.ts", []]], ["kysely"])).usesDatabase).toBe(
+    true
+  )
+  expect(
+    detectImports(facts([["supabase/migrations/001.ts", []]])).usesDatabase
+  ).toBe(true)
+  expect(
+    detectImports(facts([["prisma/schema.prisma", []]])).usesDatabase
+  ).toBe(true)
+})
+
+test("fan-out counts only imports that point back into the repository", () => {
+  const result = detectImports(
+    facts([
+      [
+        "src/a.ts",
+        ["react", "next/link", "next/image", "zod", "./b", "@/lib/x"],
+      ],
+      ["src/c.ts", ["react", "lodash", "date-fns", "../d/e"]],
+    ])
+  )
+  expect(result.measurements.lowFanout?.value).toBe(1.5)
+  expect(result.has.lowFanout).toBe(true)
 })
 
 test("measures median fan-out across distinct directories", () => {
@@ -92,13 +132,16 @@ test("measures median fan-out across distinct directories", () => {
   expect(wide.has.lowFanout).toBe(false)
 })
 
-test("counts API route files", () => {
+test("counts API route files across framework conventions", () => {
   const result = detectImports(
     facts([
       ["app/api/users/route.ts", []],
       ["app/api/posts/route.ts", []],
       ["app/page.tsx", []],
+      ["src/routes/users.ts", []],
+      ["src/users.controller.ts", []],
+      ["src/routes/users.test.ts", []],
     ])
   )
-  expect(result.apiRoutes).toBe(2)
+  expect(result.apiRoutes).toBe(4)
 })

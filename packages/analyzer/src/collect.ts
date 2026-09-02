@@ -9,6 +9,8 @@ const IMPORT_PATTERNS = [
   /\bimport\(\s*["']([^"']+)["']\s*\)/g,
 ]
 
+const ENV_READ = /\b(process|Bun|Deno)\.env\b|import\.meta\.env/
+
 function stripCommentsAndStrings(source: string): string {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, " ")
@@ -99,11 +101,16 @@ export function collect(
       keptText.set(entry.path, text)
 
     if (isCodeFile(entry.path)) {
-      codeFiles.push({
-        path: entry.path,
-        bytes: entry.bytes,
-        imports: sampled.has(entry.path) ? extractImports(text ?? "") : null,
-      })
+      codeFiles.push(
+        sampled.has(entry.path)
+          ? {
+              path: entry.path,
+              bytes: entry.bytes,
+              imports: extractImports(text ?? ""),
+              readsEnv: ENV_READ.test(text ?? ""),
+            }
+          : { path: entry.path, bytes: entry.bytes, imports: null }
+      )
     }
   }
 

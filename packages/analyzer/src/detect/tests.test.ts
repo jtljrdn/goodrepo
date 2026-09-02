@@ -25,14 +25,22 @@ test("detects a test script and framework config", () => {
   expect(result.testFramework).toBe("vitest")
 })
 
-test("falls back to the test script when there is no config file", () => {
+test("a runner named in the test script counts as a framework, config or not", () => {
   const result = detectTests(
     facts(["package.json"], {
       "package.json": pkg({ scripts: { test: "bun test" } }),
     })
   )
-  expect(result.has.testConfig).toBe(false)
+  expect(result.has.testConfig).toBe(true)
   expect(result.testFramework).toBe("bun")
+
+  const bare = detectTests(
+    facts(["package.json"], {
+      "package.json": pkg({ scripts: { test: "echo no tests" } }),
+    })
+  )
+  expect(bare.has.testConfig).toBe(false)
+  expect(bare.testFramework).toBeNull()
 })
 
 test("counts test files", () => {
@@ -52,7 +60,7 @@ test("no test files fails testsExist", () => {
 test("detects coverage from a script or from config", () => {
   expect(
     detectTests(
-      facts(["package.json"], {
+      facts(["package.json", "src/a.test.ts"], {
         "package.json": pkg({
           scripts: { "test:coverage": "vitest --coverage" },
         }),
@@ -61,15 +69,27 @@ test("detects coverage from a script or from config", () => {
   ).toBe(true)
   expect(
     detectTests(
-      facts(["vitest.config.ts"], {
+      facts(["vitest.config.ts", "src/a.test.ts"], {
         "vitest.config.ts": "export default { test: { coverage: {} } }",
       })
     ).has.coverage
   ).toBe(true)
   expect(
+    detectTests(
+      facts(["package.json", "src/a.test.ts"], { "package.json": pkg({}) })
+    ).has.coverage
+  ).toBe(false)
+})
+
+test("coverage does not apply when there are no tests to cover", () => {
+  expect(
     detectTests(facts(["package.json"], { "package.json": pkg({}) })).has
       .coverage
-  ).toBe(false)
+  ).toBeNull()
+})
+
+test("ciRunsTests does not apply when there is no workflow to read", () => {
+  expect(detectTests(facts(["src/a.test.ts"])).has.ciRunsTests).toBeNull()
 })
 
 test("detects CI running the test suite", () => {
@@ -86,4 +106,14 @@ test("detects CI running the test suite", () => {
     })
   )
   expect(withoutTests.has.ciRunsTests).toBe(false)
+})
+
+test("a root test script that only delegates to workspaces is not scored for a framework", () => {
+  const result = detectTests(
+    facts(["package.json"], {
+      "package.json": pkg({ scripts: { test: "turbo run test" } }),
+    })
+  )
+  expect(result.has.testConfig).toBeNull()
+  expect(result.testFramework).toBeNull()
 })

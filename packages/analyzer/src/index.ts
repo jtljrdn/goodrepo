@@ -6,6 +6,8 @@ import { detectMetrics } from "./detect/metrics"
 import { detectStructure } from "./detect/structure"
 import { detectTests } from "./detect/tests"
 import { detectTooling } from "./detect/tooling"
+import { readDependencies, readPackageJson } from "./detect/manifest"
+import { THRESHOLDS } from "./thresholds"
 import type {
   Measurement,
   RawFacts,
@@ -62,21 +64,7 @@ const FRAMEWORK_MARKERS: [string, RegExp][] = [
 ]
 
 function detectFramework(facts: RawFacts): string {
-  const text = facts.keptText.get("package.json") ?? ""
-  let deps: string[] = []
-  try {
-    const parsed: unknown = JSON.parse(text)
-    if (typeof parsed === "object" && parsed !== null) {
-      const pkg = parsed as Record<string, unknown>
-      for (const key of ["dependencies", "devDependencies"]) {
-        const group = pkg[key]
-        if (typeof group === "object" && group !== null)
-          deps.push(...Object.keys(group))
-      }
-    }
-  } catch {
-    deps = []
-  }
+  const deps = readDependencies(readPackageJson(facts))
   for (const [name, marker] of FRAMEWORK_MARKERS) {
     if (deps.some((dep) => marker.test(dep))) return name
   }
@@ -93,12 +81,20 @@ export function analyze(
   const facts = collect(entries, texts, sampled, truncated)
 
   const manifest = detectManifest(facts)
-  const tooling = detectTooling(facts)
-  const docs = detectDocs(facts, manifest.packageManager)
   const tests = detectTests(facts)
-  const structure = detectStructure(facts)
-  const metrics = detectMetrics(facts)
   const imports = detectImports(facts)
+  const tooling = detectTooling(facts, manifest.library)
+  const structure = detectStructure(facts, manifest.workspaceRoots)
+  const metrics = detectMetrics(facts)
+  const docs = detectDocs(facts, {
+    packageManager: manifest.packageManager,
+    tests: tests.testFiles > 0,
+    testScript: tests.has.testScript,
+    buildScript: manifest.has.buildScript,
+    devScript: "dev" in manifest.scripts,
+    database: imports.usesDatabase,
+    api: imports.apiRoutes >= 2,
+  })
 
   const has: Record<SignalId, boolean | null> = {
     ...manifest.has,
@@ -116,13 +112,17 @@ export function analyze(
     ...structure.measurements,
     ...metrics.measurements,
     ...imports.measurements,
-    readmeDepth: { value: docs.readmeWords, threshold: 300, unit: "words" },
+    readmeDepth: {
+      value: docs.readmeWords,
+      threshold: THRESHOLDS.readmeWords.threshold,
+      unit: THRESHOLDS.readmeWords.unit,
+    },
   }
 
   return {
     ...meta,
     framework: detectFramework(facts),
-    language: "TypeScript",
+    language: manifest.language,
     files: facts.paths.length,
     directories: structure.directories,
     maxDirectoryDepth: structure.maxDirectoryDepth,

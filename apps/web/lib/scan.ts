@@ -110,7 +110,7 @@ async function measure(
   return { ok: true, profile, overall, categories }
 }
 
-const cachedMeasure = cachedByCommit("scan", "v1", measure)
+const cachedMeasure = cachedByCommit("scan", "v2", measure)
 
 export async function scanAtSha(
   owner: string,

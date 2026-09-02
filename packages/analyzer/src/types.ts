@@ -63,6 +63,7 @@ export type CodeFileFacts = {
   path: string
   bytes: number
   imports: string[] | null
+  readsEnv?: boolean
 }
 
 export type SampleInfo = { sampled: number; total: number }

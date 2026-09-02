@@ -106,3 +106,27 @@ test("lowercase and kebab-case are one convention, not two", () => {
   expect(mixed.measurements.consistentNaming?.value).toBe(1)
   expect(mixed.has.consistentNaming).toBe(true)
 })
+
+test("naming is judged within each folder, so PascalCase components beside kebab utilities pass", () => {
+  const result = detectMetrics(
+    facts([
+      ["src/components/Button.tsx", 1],
+      ["src/components/Card.tsx", 1],
+      ["src/components/index.ts", 1],
+      ["src/lib/parse-repo.ts", 1],
+      ["src/lib/score.ts", 1],
+    ])
+  )
+  expect(result.measurements.consistentNaming?.value).toBe(1)
+  expect(result.has.consistentNaming).toBe(true)
+})
+
+test("naming is not scored when no folder holds two files", () => {
+  const result = detectMetrics(
+    facts([
+      ["src/a/One.ts", 1],
+      ["src/b/two.ts", 1],
+    ])
+  )
+  expect(result.has.consistentNaming).toBeNull()
+})
