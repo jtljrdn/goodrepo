@@ -208,25 +208,3 @@ export function AuthForm({ next, github }: { next: string; github: boolean }) {
     </div>
   )
 }
-
-export function SignOutButton() {
-  const router = useRouter()
-  const [busy, setBusy] = React.useState(false)
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="xs"
-      disabled={busy}
-      onClick={async () => {
-        setBusy(true)
-        await authClient.signOut()
-        router.refresh()
-      }}
-      className="text-muted-foreground hover:text-foreground"
-    >
-      {busy ? "Signing out" : "Sign out"}
-    </Button>
-  )
-}
