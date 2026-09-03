@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { Menu } from "@base-ui/react/menu"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, Logout03Icon } from "@hugeicons/core-free-icons"
@@ -18,20 +17,19 @@ export function AccountMenu({
   email,
   name,
   image,
-  allowance,
 }: {
   email: string
   name: string
   image: string | null
-  allowance: string | null
 }) {
-  const router = useRouter()
   const [busy, setBusy] = React.useState(false)
 
+  // Not router.refresh(): it leaves the signed-in account strip on screen, because that strip
+  // is a server component behind a Suspense boundary in a partially prerendered page.
   async function signOut() {
     setBusy(true)
     await authClient.signOut()
-    router.refresh()
+    window.location.reload()
   }
 
   return (
@@ -70,15 +68,6 @@ export function AccountMenu({
                 {email}
               </p>
             </div>
-
-            {allowance ? (
-              <>
-                <Menu.Separator className="h-px bg-border" />
-                <p className="px-3 py-2 text-xs text-muted-foreground">
-                  {allowance}
-                </p>
-              </>
-            ) : null}
 
             <Menu.Separator className="h-px bg-border" />
             <Menu.Item

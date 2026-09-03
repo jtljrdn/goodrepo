@@ -6,9 +6,20 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { parseRepoInput } from "@/lib/parse-repo"
 
-export function ScanForm({ className }: { className?: string }) {
+const DEFAULT_HINT = "Public repos need no sign in. No AI, no waiting."
+
+export function ScanForm({
+  className,
+  hint = DEFAULT_HINT,
+  deepOption = false,
+}: {
+  className?: string
+  hint?: string | null
+  deepOption?: boolean
+}) {
   const router = useRouter()
   const [value, setValue] = React.useState("")
+  const [deep, setDeep] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
@@ -16,14 +27,16 @@ export function ScanForm({ className }: { className?: string }) {
     event.preventDefault()
     const parsed = parseRepoInput(value)
     if (!parsed) {
-      setError("Enter a public repository as github.com/owner/repo")
+      setError("Enter a repository as github.com/owner/repo")
       return
     }
     setError(null)
     startTransition(() => {
-      router.push(`/${parsed.owner}/${parsed.repo}`)
+      router.push(`/${parsed.owner}/${parsed.repo}${deep ? "/deep" : ""}`)
     })
   }
+
+  const message = error ?? hint
 
   return (
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
@@ -50,17 +63,31 @@ export function ScanForm({ className }: { className?: string }) {
           className="h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-muted-foreground/60"
         />
         <Button type="submit" size="lg" disabled={pending} className="m-1 px-4">
-          {pending ? "Scanning" : "Scan"}
+          {pending ? "Scanning" : deep ? "Deep scan" : "Scan"}
         </Button>
       </div>
-      <p
-        className={cn(
-          "mt-2 text-xs",
-          error ? "text-destructive" : "text-muted-foreground"
-        )}
-      >
-        {error ?? "Public repos only. No sign in, no AI, no waiting."}
-      </p>
+      {deepOption ? (
+        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={deep}
+            onChange={(event) => setDeep(event.target.checked)}
+            className="size-3.5 accent-foreground"
+          />
+          Deep scan: an AI reads the code. Slower, and it uses one of your runs
+          for today.
+        </label>
+      ) : null}
+      {message ? (
+        <p
+          className={cn(
+            "mt-2 text-xs",
+            error ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {message}
+        </p>
+      ) : null}
     </form>
   )
 }

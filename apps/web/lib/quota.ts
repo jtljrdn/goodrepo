@@ -1,6 +1,14 @@
 import { pool } from "@/lib/db"
 
-export const DAILY_RUNS_PER_ACCOUNT: number = 5
+export const DAILY_RUNS_PER_ACCOUNT: number = 3
+
+// The daily cap is a rolling 24 hours. claimDeepScan enforces it and
+// deepRunsToday reports it, so they must read the same window.
+const DAY_WINDOW = "created_at > now() - interval '1 day'"
+
+export function deepScansLeft(used: number): number {
+  return Math.max(DAILY_RUNS_PER_ACCOUNT - used, 0)
+}
 
 const DEFAULT_MONTHLY_RUNS = 700
 
@@ -66,7 +74,7 @@ export async function claimDeepScan(
            where created_at >= date_trunc('month', now() at time zone 'utc')
          ) as month_runs,
          count(*) filter (
-           where user_id = $1 and created_at > now() - interval '1 day'
+           where user_id = $1 and ${DAY_WINDOW}
          ) as day_runs,
          count(*) filter (
            where user_id = $1 and owner = $2 and repo = $3 and commit_sha = $4
@@ -102,4 +110,14 @@ export async function claimDeepScan(
   } finally {
     client.release()
   }
+}
+
+export async function deepRunsToday(userId: string): Promise<number> {
+  const { rows } = await pool.query<{ runs: string }>(
+    `select count(*) as runs
+     from goodrepo.deep_scan_run
+     where user_id = $1 and ${DAY_WINDOW}`,
+    [userId]
+  )
+  return Number(rows[0]?.runs ?? 0)
 }

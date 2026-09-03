@@ -225,7 +225,7 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
         </span>
         <span className="flex-1 text-xs">{category.name}</span>
         <span className="hidden text-xs text-muted-foreground sm:inline">
-          {category.earnedPoints} / {category.totalPoints} pts
+          {category.earnedPoints} / {category.totalPoints} points
         </span>
         <span
           className={cn(

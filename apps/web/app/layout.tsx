@@ -23,7 +23,7 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 const title = "GoodRepo - agent-readiness score for any GitHub repo"
 const description =
-  "GoodRepo scores GitHub repositories for AI agent readiness from measurable, deterministic repository signals."
+  "GoodRepo scores GitHub repositories on how easy they are for AI agents to work in."
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

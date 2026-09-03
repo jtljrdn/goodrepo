@@ -2,10 +2,10 @@ import { SiteHeader } from "@/components/site-header"
 import { Elapsed } from "@/components/elapsed"
 
 const STEPS = [
-  "Cloning this commit into a throwaway sandbox",
-  "Listing the tracked files",
-  "Reading the code behind the open signals",
-  "Folding the answers back into the score",
+  "Copying this commit into a temporary workspace",
+  "Listing the files",
+  "Reading the code behind the unanswered checks",
+  "Adding the answers into the score",
 ]
 
 export default function Loading() {
@@ -17,7 +17,7 @@ export default function Loading() {
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground">Deep scan</p>
             <h1 className="mt-3 text-2xl font-medium tracking-tight">
-              Reading the source
+              Reading the code
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Usually about a minute. Leaving this page cancels nothing, but you
@@ -41,9 +41,9 @@ export default function Loading() {
           ))}
         </ul>
         <p className="border-t border-border/60 py-4 text-xs text-muted-foreground">
-          The fast scan is already done. Only the handful of signals that need
-          code to be read are being answered here, and the answer is cached
-          against this commit.
+          The quick scan is already done. Only the few checks that need the
+          code to be read are answered here, and the result is saved for this
+          commit.
         </p>
       </main>
     </>

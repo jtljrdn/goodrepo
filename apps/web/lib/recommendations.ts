@@ -29,7 +29,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       ],
     },
     docArchitecture: {
-      title: "Document the architecture boundaries",
+      title: "Explain how the code is organized",
       impact: "High",
       source: "deep",
       evidence: (p) =>
@@ -71,14 +71,14 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       ],
     },
     singleValidationLib: {
-      title: "Standardise request validation",
+      title: "Standardize request validation",
       impact: "Medium",
       source: "deep",
       evidence: (p) =>
         `Sampled routes use ${[...new Set(p.validationPatterns)].join(", ")}. An agent copying a nearby route has no way to tell which pattern is current.`,
       fix: "Pick one validation approach and:",
       bullets: [
-        "Migrate the minority pattern to the majority one",
+        "Change the less-used approach to the common one",
         "Add a lint rule that blocks the old approach",
         "Name the chosen library in AGENTS.md",
       ],
@@ -100,7 +100,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       impact: "High",
       source: "static",
       evidence: () =>
-        "No test script was found. Agents have no deterministic way to confirm a change is safe, so they fall back to reading more code.",
+        "No test script was found. Agents have no reliable way to confirm a change is safe, so they fall back to reading more code.",
       fix: "Add a test script and document it:",
       bullets: [
         'Define "test" in package.json',
@@ -148,7 +148,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       fix: "Group the pieces a change touches together:",
       bullets: [
         "Move types next to the code that owns them",
-        "Collapse thin pass-through layers",
+        "Remove thin layers that only pass things through",
         "Keep a feature's schema, handler and test in one folder",
       ],
     },
@@ -162,7 +162,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       bullets: [],
     },
     shallowTree: {
-      title: "Flatten the deepest paths",
+      title: "Flatten the deepest folders",
       impact: "Low",
       source: "static",
       evidence: (p) =>
@@ -180,7 +180,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       bullets: [],
     },
     colocatedTests: {
-      title: "Colocate tests with source",
+      title: "Keep tests next to the code they cover",
       impact: "Low",
       source: "static",
       evidence: () =>

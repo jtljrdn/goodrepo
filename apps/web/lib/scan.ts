@@ -33,19 +33,19 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Not scanned",
         detail:
-          "GoodRepo currently analyzes JavaScript and TypeScript repositories. This one has no package.json at its root. Support for other ecosystems is on the roadmap.",
+          "GoodRepo only scans JavaScript and TypeScript projects for now. This one has no package.json in its top folder. Other languages are coming.",
       }
     case "not-found":
       return {
         title: "Not reachable",
         detail:
-          "That repository or commit is private or does not exist. GoodRepo only scans public repositories.",
+          "That repository or commit does not exist, or GoodRepo cannot see it. To scan a private repository, sign in with GitHub and give the GoodRepo app access to it.",
       }
     case "rate-limited":
       return {
         title: "Try again shortly",
         detail:
-          "GitHub is rate limiting requests right now. Wait a minute and scan again.",
+          "GitHub is asking us to slow down. Wait a minute and scan again.",
       }
     case "empty":
       return {
@@ -56,7 +56,7 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Too large to scan",
         detail:
-          "This repository has more files than GitHub will list in one request, so GoodRepo cannot see all of it.",
+          "This repository has too many files for GitHub to list at once, so GoodRepo cannot see all of it.",
       }
   }
 }
@@ -69,10 +69,9 @@ function reject(failure: ScanFailure): ScanResult {
 async function measure(
   owner: string,
   repo: string,
-  sha: string
+  sha: string,
+  token: string | undefined
 ): Promise<ScanResult> {
-  const token = process.env.GITHUB_TOKEN
-
   const meta = await fetchRepoMeta(owner, repo, token)
   if (isFailure(meta)) return reject(meta)
 
@@ -109,15 +108,21 @@ async function measure(
   return { ok: true, profile, overall, categories }
 }
 
-const cachedMeasure = cachedByCommit("scan", "v3", measure)
-
-export async function scanAtSha(
+// Reads the token inside rather than taking it as an argument, which would put it in the
+// cache key and make a rotated token miss every entry.
+function measurePublic(
   owner: string,
   repo: string,
   sha: string
 ): Promise<ScanResult> {
+  return measure(owner, repo, sha, process.env.GITHUB_TOKEN)
+}
+
+const cachedMeasure = cachedByCommit("scan", "v4", measurePublic)
+
+async function settle(run: Promise<ScanResult>): Promise<ScanResult> {
   try {
-    return await cachedMeasure(owner, repo, sha)
+    return await run
   } catch (error) {
     if (isTransient(error)) {
       return {
@@ -132,6 +137,14 @@ export async function scanAtSha(
   }
 }
 
+export async function scanAtSha(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<ScanResult> {
+  return settle(cachedMeasure(owner, repo, sha))
+}
+
 const FULL_SHA = /^[0-9a-f]{40}$/
 const SHA_PREFIX = /^[0-9a-f]{7,40}$/i
 
@@ -143,16 +156,21 @@ export function readSha(value: string | string[] | undefined): string | null {
     : "invalid"
 }
 
+export function shaQuery(sha: string | null | undefined): string {
+  return sha ? `?sha=${sha}` : ""
+}
+
 export async function resolveSha(
   owner: string,
   repo: string,
-  ref: string | null
+  ref: string | null,
+  token: string | undefined = process.env.GITHUB_TOKEN
 ): Promise<string | ScanFailure> {
   if (ref === "invalid")
     return { kind: "not-found", message: "That is not a commit sha." }
   if (ref !== null && FULL_SHA.test(ref)) return ref
 
-  return fetchHeadSha(owner, repo, ref ?? "HEAD", process.env.GITHUB_TOKEN)
+  return fetchHeadSha(owner, repo, ref ?? "HEAD", token)
 }
 
 export async function runScan(
@@ -164,4 +182,16 @@ export async function runScan(
   if (isFailure(sha)) return { ok: false, failure: sha }
 
   return scanAtSha(owner, repo, sha)
+}
+
+export async function runPrivateScan(
+  owner: string,
+  repo: string,
+  token: string,
+  ref: string | null = null
+): Promise<ScanResult> {
+  const sha = await resolveSha(owner, repo, ref, token)
+  if (isFailure(sha)) return { ok: false, failure: sha }
+
+  return settle(measure(owner, repo, sha, token))
 }

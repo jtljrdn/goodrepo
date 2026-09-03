@@ -12,6 +12,7 @@ import {
 import type { RepoProfile, SignalVerdict } from "@/lib/profile"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { recommend } from "@/lib/recommendations"
+import { shaQuery } from "@/lib/scan"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
 
 export type DeepDetail = {
@@ -55,9 +56,11 @@ export function ReportShell({
 export function FailureCard({
   title,
   detail,
+  children,
 }: {
   title: string
   detail: string
+  children?: React.ReactNode
 }) {
   return (
     <div className="mt-16 border border-border/60 p-8">
@@ -65,6 +68,7 @@ export function FailureCard({
       <p className="mt-3 max-w-prose font-sans text-sm leading-relaxed text-muted-foreground">
         {detail}
       </p>
+      {children ? <div className="mt-6">{children}</div> : null}
     </div>
   )
 }
@@ -75,14 +79,16 @@ export function ReportView({
   categories,
   deep = null,
   sha = null,
+  deepAvailable = true,
 }: {
   profile: RepoProfile
   overall: number | null
   categories: ScoredCategory[]
   deep?: DeepDetail | null
   sha?: string | null
+  deepAvailable?: boolean
 }) {
-  const query = sha ? `?sha=${sha}` : ""
+  const query = shaQuery(sha)
   const recommendations = recommend(profile, categories)
   const ran = deep !== null && deep.unfinished === null ? deep : null
   const signals = categories.flatMap((category) => category.signals)
@@ -108,6 +114,16 @@ export function ReportView({
           {measured} checks run
           {pending > 0 ? ` · ${pending} need a deep scan` : ""}
         </span>
+        {pending > 0 && deepAvailable && DEEP_SCAN_ENABLED ? (
+          <Link
+            href={`/${profile.owner}/${profile.repo}/deep${query}`}
+            prefetch={false}
+            rel="nofollow"
+            className="text-foreground underline-offset-4 hover:underline"
+          >
+            Run one, free with a GitHub sign-in
+          </Link>
+        ) : null}
       </div>
 
       {deep?.unfinished ? (
@@ -174,22 +190,30 @@ export function ReportView({
       <Section
         title="Go deeper"
         hint={
-          ran
-            ? "Deep scan included"
-            : DEEP_SCAN_ENABLED
-              ? "Not run yet"
-              : "Not available yet"
+          !deepAvailable
+            ? "Public repositories only"
+            : ran
+              ? "Deep scan included"
+              : DEEP_SCAN_ENABLED
+                ? "Not run yet"
+                : "Not available yet"
         }
       >
         <div className="grid gap-px sm:max-w-md">
           <div className="border border-border/60 p-5">
             <h3 className="text-sm font-medium">Deep scan</h3>
             <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
-              {ran
-                ? "An AI read the code at this commit and answered the checks the quick scan could not. Opening this report again is free."
-                : `An AI reads the code to settle the ${pending > 0 ? pending : "few"} checks a quick scan cannot. Takes about a minute.`}
+              {!deepAvailable
+                ? "Deep scans use GoodRepo's own GitHub access, which cannot see private repositories. This report is the quick scan."
+                : ran
+                  ? "An AI read the code at this commit and answered the checks the quick scan could not. Opening this report again is free."
+                  : `An AI reads the code to settle the ${pending > 0 ? pending : "few"} checks a quick scan cannot. Takes about a minute and is free with a GitHub sign-in.`}
             </p>
-            {!DEEP_SCAN_ENABLED ? (
+            {!deepAvailable ? (
+              <Button variant="outline" size="sm" className="mt-4" disabled>
+                Public repositories only
+              </Button>
+            ) : !DEEP_SCAN_ENABLED ? (
               <Button variant="outline" size="sm" className="mt-4" disabled>
                 Not available yet
               </Button>
