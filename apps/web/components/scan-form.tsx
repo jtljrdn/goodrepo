@@ -13,8 +13,6 @@ export function ScanForm({
   hint = DEFAULT_HINT,
 }: {
   className?: string
-  // Null on the dashboard: the reader is already signed in, so the line has nothing to tell
-  // them. The error still shows.
   hint?: string | null
 }) {
   const router = useRouter()

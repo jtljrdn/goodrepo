@@ -42,9 +42,6 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
     return (
       <ReportShell owner={owner} repo={repo}>
         <FailureCard title={title} detail={detail}>
-          {/* Offered without reading the session, which would make this page dynamic and
-              cost every public report its prerendered shell. The private route already
-              redirects a signed-out visitor to sign in. */}
           {result.failure.kind === "not-found" ? (
             <Link
               href={`/${owner}/${repo}/private${query}`}

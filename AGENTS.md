@@ -10,7 +10,7 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 
 ### Entry points
 
-- `apps/web` — the Next.js App Router site. `app/page.tsx` is the signed-in dashboard and `app/home/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report, `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in, and `app/[owner]/[repo]/private/page.tsx` the report for a repository only the signed-in user can see. Scanning happens in server components, not API routes; the only route handler is
+- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form, re-exported at `app/home/page.tsx` and swapped for `app/dashboard/page.tsx` once you are signed in; `app/[owner]/[repo]/page.tsx` renders the free static report, `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in, and `app/[owner]/[repo]/private/page.tsx` the report for a repository only the signed-in user can see. Scanning happens in server components, not API routes; the only route handler is
 `app/api/auth/[...all]/route.ts`, which Better Auth owns. `app/sign-in/page.tsx` is the one
 account surface, and it is where the deep and private routes send anonymous visitors.
 
@@ -60,13 +60,34 @@ the same count and each decide they are under the cap. The unique constraint on
 account nulls its rows rather than removing them, so the month's spend cannot be reset by
 deleting a user.
 
-**`/` is the dashboard, `/home` is the landing page.** A signed-in visitor lands on their
-own scan history; everyone else is sent to `/home`, which is the page worth indexing and
-names itself canonical. That redirect lives in `proxy.ts`, not in the page, because `/` is
-partially prerendered and its shell is flushed before a `redirect()` inside the page can run
-— the same reason the disabled deep route answers `200` with the 404 page. The proxy reads
-only the session cookie, never the database, since it runs on prefetches too; a stale cookie
-falls through to the page, which does the real check.
+**`/` is the landing page, `/dashboard` is the scan history.** A signed-in visitor asking
+for `/` is sent to `/dashboard`; a signed-out visitor asking for `/dashboard` is sent to `/`.
+`/home` re-exports the landing page so someone signed in can still read it, and carries a
+`noindex` and a canonical pointing at `/`, which is the copy worth ranking.
+
+Both hops live in `proxy.ts`, not in the pages. Both pages are partially prerendered, so the
+shell is flushed before a session read finishes and a `redirect()` after that answers `200`
+with an empty page instead of redirecting — the same trap as the disabled deep route. The
+proxy reads only the session cookie, never the database, because it runs on prefetches too. A
+stale cookie falls through to the dashboard, which does the real check and redirects to
+`/home`; that must not be `/`, which would bounce back to `/dashboard` and loop.
+
+**Reading the session costs no query.** `session.cookieCache` in `lib/auth.ts` keeps a
+signed copy of the session, user included, in a short-lived cookie, so `currentSession()`
+answers from the request itself. That copy carries the live session token and its expiry, so
+a signed-out or expired session is still rejected without a round trip; what it cannot see is
+a session deleted server-side, for up to its `maxAge`. Anything that would *authorize* on a
+stale answer must call `verifiedSession()` instead, which forces the database read — today
+that is the deep scan, because it spends money against a user id. Display, history and
+redirects use `currentSession()`.
+
+**Keep the session read out of a page's top level.** `app/dashboard/page.tsx` awaited the
+session in the route component, which put the entire page inside one dynamic hole: the
+prerendered shell was the footer and nothing else, so a signed-in visitor saw a blank page
+until the database answered. The header, heading and scan form now render around a single
+`<Suspense>` that holds the session read and the queries, and its fallback matches the shape
+of what replaces it. The redirect at `/` costs about five milliseconds; the blank page was
+never the redirect.
 
 **Every report a signed-in account opens writes one row into `goodrepo.scan_run`**, which is
 what the dashboard reads. The write happens in `components/log-scan.tsx`, a component that

@@ -10,10 +10,8 @@ export function AuthForm({ next }: { next: string }) {
   const [error, setError] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
 
-  // Nothing here clears `busy` on success, because success leaves the page for GitHub. Coming
-  // back with the back button restores this component from the browser's back/forward cache
-  // with its state intact, so the button would stay disabled forever. `pageshow` is the only
-  // event that fires on a restore like that.
+  // Returning by the back button restores this component from the bfcache with `busy` still
+  // set, and `pageshow` is the only event that fires on such a restore.
   React.useEffect(() => {
     const wake = () => setBusy(false)
     window.addEventListener("pageshow", wake)

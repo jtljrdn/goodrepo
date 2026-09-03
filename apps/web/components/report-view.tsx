@@ -85,8 +85,6 @@ export function ReportView({
   categories: ScoredCategory[]
   deep?: DeepDetail | null
   sha?: string | null
-  // False on a private report: the deep scan clones with the site's own token, which cannot
-  // reach a repository only the reader can see.
   deepAvailable?: boolean
 }) {
   const query = sha ? `?sha=${sha}` : ""

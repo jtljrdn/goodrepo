@@ -25,9 +25,6 @@ export type ScanRecord = {
   score: number | null
 }
 
-// Deliberately swallows its errors. This runs as a side effect of rendering a report, and a
-// history row is worth less than the report itself, so a database that is down or a schema
-// that has not been migrated yet must not take the page with it.
 export async function recordScan(
   userId: string,
   scan: ScanRecord
@@ -54,8 +51,6 @@ type RepoRow = {
   created_at: Date
 }
 
-// One entry per repository, showing the newest commit that account scanned. Re-scanning at a
-// new commit replaces the entry rather than stacking beside it.
 export async function recentRepos(
   userId: string,
   limit = 50

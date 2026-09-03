@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { LogScan } from "@/components/log-scan"
-import { currentSession } from "@/lib/auth"
+import { verifiedSession } from "@/lib/auth"
 import { runDeepScan } from "@/lib/deep"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import {
@@ -43,7 +43,7 @@ export default async function DeepReportPage(
   const ref = readSha((await props.searchParams).sha)
   const query = ref ? `?sha=${ref}` : ""
 
-  const session = await currentSession()
+  const session = await verifiedSession()
   if (!session) {
     redirect(
       `/sign-in?next=${encodeURIComponent(`/${owner}/${repo}/deep${query}`)}`

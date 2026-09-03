@@ -1,6 +1,3 @@
--- Every report a signed-in account opens, one row per repository commit and scan kind.
--- Deleting an account removes its history: unlike goodrepo.deep_scan_run, nothing here
--- meters spend, so there is no reason to keep the rows behind a null user.
 create table if not exists goodrepo.scan_run (
   id         bigint generated always as identity primary key,
   user_id    text        not null references better_auth."user" (id) on delete cascade,

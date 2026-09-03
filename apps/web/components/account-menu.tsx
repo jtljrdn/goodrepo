@@ -26,10 +26,8 @@ export function AccountMenu({
 }) {
   const [busy, setBusy] = React.useState(false)
 
-  // A full reload, not router.refresh(). The account strip is a server component behind a
-  // Suspense boundary in a partially prerendered page, and a refresh was leaving the signed-in
-  // version of it on screen. Reloading also drops any client state that outlived the session,
-  // which is what signing out should do anyway.
+  // Not router.refresh(): it leaves the signed-in account strip on screen, because that strip
+  // is a server component behind a Suspense boundary in a partially prerendered page.
   async function signOut() {
     setBusy(true)
     await authClient.signOut()

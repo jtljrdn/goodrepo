@@ -108,8 +108,8 @@ async function measure(
   return { ok: true, profile, overall, categories }
 }
 
-// The cached wrapper takes only the three arguments the cache key is built from. Reading the
-// token inside keeps it out of that key, and keeps a rotated token from missing every entry.
+// Reads the token inside rather than taking it as an argument, which would put it in the
+// cache key and make a rotated token miss every entry.
 function measurePublic(
   owner: string,
   repo: string,
@@ -180,15 +180,6 @@ export async function runScan(
   return scanAtSha(owner, repo, sha)
 }
 
-// Scans as the signed-in user rather than as the site, so it reaches whatever their GitHub
-// App installation covers. Deliberately never touches `scanAtSha`: that cache is keyed by
-// commit alone and is shared with anonymous visitors and the OG image, so one private report
-// written into it would be readable by anyone who guessed the URL.
-//
-// ponytail: private results are not cached at all. Only the one person who can see the repo
-// ever loads this page, so a per-user cache would buy little, and a permanent entry would
-// outlive the GitHub access that justified it. Add one keyed by (userId, owner, repo, sha)
-// with a bounded revalidate if reloads start costing real time.
 export async function runPrivateScan(
   owner: string,
   repo: string,
