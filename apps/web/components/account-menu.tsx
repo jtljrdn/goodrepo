@@ -17,12 +17,10 @@ export function AccountMenu({
   email,
   name,
   image,
-  allowance,
 }: {
   email: string
   name: string
   image: string | null
-  allowance: string | null
 }) {
   const [busy, setBusy] = React.useState(false)
 
@@ -70,15 +68,6 @@ export function AccountMenu({
                 {email}
               </p>
             </div>
-
-            {allowance ? (
-              <>
-                <Menu.Separator className="h-px bg-border" />
-                <p className="px-3 py-2 text-xs text-muted-foreground">
-                  {allowance}
-                </p>
-              </>
-            ) : null}
 
             <Menu.Separator className="h-px bg-border" />
             <Menu.Item

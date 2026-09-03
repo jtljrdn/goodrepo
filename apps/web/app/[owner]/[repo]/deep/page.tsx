@@ -9,7 +9,7 @@ import {
   MONTHLY_RUNS_TOTAL,
   type QuotaRefusal,
 } from "@/lib/quota"
-import { failureMessage, readSha } from "@/lib/scan"
+import { failureMessage, readSha, shaQuery } from "@/lib/scan"
 
 export const maxDuration = 300
 
@@ -41,7 +41,7 @@ export default async function DeepReportPage(
 
   const { owner, repo } = await props.params
   const ref = readSha((await props.searchParams).sha)
-  const query = ref ? `?sha=${ref}` : ""
+  const query = shaQuery(ref)
 
   const session = await verifiedSession()
   if (!session) {

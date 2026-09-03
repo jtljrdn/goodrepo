@@ -3,7 +3,7 @@ import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { LogScan } from "@/components/log-scan"
 import { alt } from "@/app/opengraph-image"
-import { failureMessage, readSha, runScan } from "@/lib/scan"
+import { failureMessage, readSha, runScan, shaQuery } from "@/lib/scan"
 
 export const maxDuration = 300
 
@@ -38,7 +38,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
 
   if (!result.ok) {
     const { title, detail } = failureMessage(result.failure)
-    const query = ref ? `?sha=${ref}` : ""
+    const query = shaQuery(ref)
     return (
       <ReportShell owner={owner} repo={repo}>
         <FailureCard title={title} detail={detail}>

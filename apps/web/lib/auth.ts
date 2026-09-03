@@ -40,12 +40,14 @@ export async function verifiedSession() {
 }
 
 export async function githubToken(): Promise<string | undefined> {
-  const requestHeaders = await headers()
-  const accounts = await auth.api.listUserAccounts({ headers: requestHeaders })
-  const account = accounts.find((a) => a.providerId === "github")
-  if (!account) return undefined
-
   try {
+    const requestHeaders = await headers()
+    const accounts = await auth.api.listUserAccounts({
+      headers: requestHeaders,
+    })
+    const account = accounts.find((a) => a.providerId === "github")
+    if (!account) return undefined
+
     const { accessToken } = await auth.api.getAccessToken({
       body: { accountId: account.id },
       headers: requestHeaders,

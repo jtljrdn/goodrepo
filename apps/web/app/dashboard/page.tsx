@@ -6,8 +6,12 @@ import { ScanForm } from "@/components/scan-form"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 import { EXAMPLES, exampleHref } from "@/lib/examples"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
-import { recentRepos, usageFor, type ScanKind } from "@/lib/history"
-import { DAILY_RUNS_PER_ACCOUNT, deepRunsToday } from "@/lib/quota"
+import { historyFor, type ScanKind } from "@/lib/history"
+import {
+  DAILY_RUNS_PER_ACCOUNT,
+  deepRunsToday,
+  deepScansLeft,
+} from "@/lib/quota"
 import { band } from "@/lib/score"
 import { relativeDays } from "@/lib/when"
 
@@ -111,10 +115,12 @@ async function History() {
   if (!session) redirect("/home")
 
   const userId = session.user.id
-  const [repos, usage, deepUsed] = await Promise.all([
-    recentRepos(userId),
-    usageFor(userId),
-    DEEP_SCAN_ENABLED ? deepRunsToday(userId) : Promise.resolve(null),
+  // A missing deep-scan count costs one tile; letting it throw costs the page.
+  const [{ usage, repos }, deepUsed] = await Promise.all([
+    historyFor(userId),
+    DEEP_SCAN_ENABLED
+      ? deepRunsToday(userId).catch(() => null)
+      : Promise.resolve(null),
   ])
 
   return (
@@ -140,7 +146,7 @@ async function History() {
           value={
             deepUsed === null
               ? "Off"
-              : String(Math.max(0, DAILY_RUNS_PER_ACCOUNT - deepUsed))
+              : String(deepScansLeft(deepUsed))
           }
           hint={
             deepUsed === null

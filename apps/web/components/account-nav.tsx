@@ -3,8 +3,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowRight02Icon } from "@hugeicons/core-free-icons"
 import { AccountMenu } from "@/components/account-menu"
 import { currentSession } from "@/lib/auth"
-import { DEEP_SCAN_ENABLED } from "@/lib/flags"
-import { DAILY_RUNS_PER_ACCOUNT, deepRunsToday } from "@/lib/quota"
 
 const CELL =
   "-mr-6 flex h-12 items-center self-stretch border-l border-border pr-6 pl-4"
@@ -16,13 +14,6 @@ export function AccountNavFallback() {
       <span className="ml-2 size-3 animate-pulse bg-muted" />
     </div>
   )
-}
-
-async function allowanceLabel(userId: string): Promise<string> {
-  const used = await deepRunsToday(userId).catch(() => null)
-  if (used === null) return `${DAILY_RUNS_PER_ACCOUNT} deep scans a day`
-  const left = Math.max(DAILY_RUNS_PER_ACCOUNT - used, 0)
-  return `${left}/${DAILY_RUNS_PER_ACCOUNT} deep scans left today`
 }
 
 export async function AccountNav() {
@@ -44,14 +35,13 @@ export async function AccountNav() {
     )
   }
 
-  const { id, email, name, image } = session.user
+  const { email, name, image } = session.user
 
   return (
     <AccountMenu
       email={email}
       name={name || (email.split("@")[0] ?? email)}
       image={image ?? null}
-      allowance={DEEP_SCAN_ENABLED ? await allowanceLabel(id) : null}
     />
   )
 }

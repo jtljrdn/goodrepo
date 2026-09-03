@@ -12,6 +12,7 @@ import {
 import type { RepoProfile, SignalVerdict } from "@/lib/profile"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { recommend } from "@/lib/recommendations"
+import { shaQuery } from "@/lib/scan"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
 
 export type DeepDetail = {
@@ -87,7 +88,7 @@ export function ReportView({
   sha?: string | null
   deepAvailable?: boolean
 }) {
-  const query = sha ? `?sha=${sha}` : ""
+  const query = shaQuery(sha)
   const recommendations = recommend(profile, categories)
   const ran = deep !== null && deep.unfinished === null ? deep : null
   const signals = categories.flatMap((category) => category.signals)

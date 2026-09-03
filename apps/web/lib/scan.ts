@@ -156,6 +156,10 @@ export function readSha(value: string | string[] | undefined): string | null {
     : "invalid"
 }
 
+export function shaQuery(sha: string | null | undefined): string {
+  return sha ? `?sha=${sha}` : ""
+}
+
 export async function resolveSha(
   owner: string,
   repo: string,

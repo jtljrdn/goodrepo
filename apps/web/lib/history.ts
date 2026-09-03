@@ -42,60 +42,79 @@ export async function recordScan(
   }
 }
 
-type RepoRow = {
-  owner: string
-  repo: string
-  commit_sha: string
-  kind: ScanKind
+type HistoryRow = {
+  repo_count: string
+  scan_count: string
+  average: string | null
+  owner: string | null
+  repo: string | null
+  commit_sha: string | null
+  kind: ScanKind | null
   score: number | null
-  created_at: Date
+  created_at: Date | null
 }
 
-export async function recentRepos(
+// Usage counts every scan, the list only the newest per repository, so both
+// read the same rows. One query, not two.
+export async function historyFor(
   userId: string,
   limit = 50
-): Promise<ScannedRepo[]> {
-  const { rows } = await pool.query<RepoRow>(
-    `select owner, repo, commit_sha, kind, score, created_at
-     from (
-       select distinct on (owner, repo)
-         owner, repo, commit_sha, kind, score, created_at
-       from goodrepo.scan_run
-       where user_id = $1
-       order by owner, repo, created_at desc
-     ) latest
-     order by created_at desc
-     limit $2`,
+): Promise<{ usage: Usage; repos: ScannedRepo[] }> {
+  const { rows } = await pool.query<HistoryRow>(
+    `with mine as (
+       select * from goodrepo.scan_run where user_id = $1
+     ),
+     usage as (
+       select
+         count(distinct (owner, repo)) as repo_count,
+         count(*) as scan_count,
+         avg(score) filter (where score is not null) as average
+       from mine
+     ),
+     latest as (
+       select owner, repo, commit_sha, kind, score, created_at
+       from (
+         select distinct on (owner, repo)
+           owner, repo, commit_sha, kind, score, created_at
+         from mine
+         order by owner, repo, created_at desc
+       ) newest
+       order by created_at desc
+       limit $2
+     )
+     select u.repo_count, u.scan_count, u.average,
+            l.owner, l.repo, l.commit_sha, l.kind, l.score, l.created_at
+     from usage u
+     left join latest l on true
+     order by l.created_at desc`,
     [userId, limit]
   )
 
-  return rows.map((row) => ({
-    owner: row.owner,
-    repo: row.repo,
-    commitSha: row.commit_sha,
-    kind: row.kind,
-    score: row.score,
-    scannedAt: row.created_at,
-  }))
-}
-
-type UsageRow = { repos: string; scans: string; average: string | null }
-
-export async function usageFor(userId: string): Promise<Usage> {
-  const { rows } = await pool.query<UsageRow>(
-    `select
-       count(distinct (owner, repo)) as repos,
-       count(*) as scans,
-       avg(score) filter (where score is not null) as average
-     from goodrepo.scan_run
-     where user_id = $1`,
-    [userId]
-  )
-
-  const row = rows[0]
+  const first = rows[0]
   return {
-    repos: Number(row?.repos ?? 0),
-    scans: Number(row?.scans ?? 0),
-    averageScore: row?.average == null ? null : Math.round(Number(row.average)),
+    usage: {
+      repos: Number(first?.repo_count ?? 0),
+      scans: Number(first?.scan_count ?? 0),
+      averageScore:
+        first?.average == null ? null : Math.round(Number(first.average)),
+    },
+    repos: rows.flatMap((row) =>
+      row.owner === null ||
+      row.repo === null ||
+      row.commit_sha === null ||
+      row.kind === null ||
+      row.created_at === null
+        ? []
+        : [
+            {
+              owner: row.owner,
+              repo: row.repo,
+              commitSha: row.commit_sha,
+              kind: row.kind,
+              score: row.score,
+              scannedAt: row.created_at,
+            },
+          ]
+    ),
   }
 }

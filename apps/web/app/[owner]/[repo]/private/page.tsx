@@ -9,7 +9,7 @@ import {
   GITHUB_APP_INSTALL_URL,
   GITHUB_SIGN_IN_ENABLED,
 } from "@/lib/auth"
-import { failureMessage, readSha, runPrivateScan } from "@/lib/scan"
+import { failureMessage, readSha, runPrivateScan, shaQuery } from "@/lib/scan"
 
 export const maxDuration = 300
 
@@ -39,7 +39,7 @@ export default async function PrivateReportPage(
 ) {
   const { owner, repo } = await props.params
   const ref = readSha((await props.searchParams).sha)
-  const query = ref ? `?sha=${ref}` : ""
+  const query = shaQuery(ref)
   const here = `/${owner}/${repo}/private${query}`
 
   const session = await currentSession()
