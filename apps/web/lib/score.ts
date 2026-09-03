@@ -278,7 +278,7 @@ export const CATEGORIES: CategoryDef[] = [
   {
     key: "tooling",
     name: "Tooling",
-    question: "Is setup, build, lint and test behaviour obvious?",
+    question: "Is setup, build, lint and test behavior obvious?",
     signals: [
       s(
         "lockfile",

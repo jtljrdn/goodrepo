@@ -3,7 +3,6 @@ import { SiteHeader } from "@/components/site-header"
 import { AuthForm } from "@/components/auth-form"
 import { AuthBackdrop } from "@/components/auth-backdrop"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
-import { DAILY_RUNS_PER_ACCOUNT } from "@/lib/quota"
 
 export const metadata = {
   title: "Sign in",
@@ -16,12 +15,6 @@ function safeNext(value: string | string[] | undefined): string {
   return value
 }
 
-const FACTS = [
-  { label: "Fast scan", value: "free, no account" },
-  { label: "Deep scan", value: `${DAILY_RUNS_PER_ACCOUNT} per day` },
-  { label: "Re-reading a report", value: "free" },
-]
-
 export default async function SignInPage(props: PageProps<"/sign-in">) {
   const { next } = await props.searchParams
   const destination = safeNext(next)
@@ -30,6 +23,7 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
   if (session) redirect(destination)
 
   const forDeepScan = destination.endsWith("/deep")
+  const forPrivate = destination.includes("/private")
 
   return (
     <>
@@ -44,21 +38,23 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
 
         <div className="relative w-full max-w-sm">
           <h1 className="text-2xl leading-tight font-medium tracking-tight text-balance">
-            {forDeepScan ? "Deep scans need an account" : "Sign in to GoodRepo"}
+            {forPrivate
+              ? "Private repositories need GitHub"
+              : forDeepScan
+                ? "Deep scans need an account"
+                : "Sign in with GitHub"}
           </h1>
 
           <div className="mt-8 bg-background">
-            <AuthForm next={destination} github={GITHUB_SIGN_IN_ENABLED} />
+            {GITHUB_SIGN_IN_ENABLED ? (
+              <AuthForm next={destination} />
+            ) : (
+              <p className="border border-border/60 p-4 text-xs leading-relaxed text-muted-foreground">
+                Sign-in is not set up on this deployment. Fast scans work
+                without an account.
+              </p>
+            )}
           </div>
-
-          <dl className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
-            {FACTS.map((fact) => (
-              <div key={fact.label} className="flex gap-1.5">
-                <dt>{fact.label}</dt>
-                <dd className="text-foreground tabular-nums">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </main>
     </>

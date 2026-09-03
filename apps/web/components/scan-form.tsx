@@ -16,7 +16,7 @@ export function ScanForm({ className }: { className?: string }) {
     event.preventDefault()
     const parsed = parseRepoInput(value)
     if (!parsed) {
-      setError("Enter a public repository as github.com/owner/repo")
+      setError("Enter a repository as github.com/owner/repo")
       return
     }
     setError(null)
@@ -59,7 +59,7 @@ export function ScanForm({ className }: { className?: string }) {
           error ? "text-destructive" : "text-muted-foreground"
         )}
       >
-        {error ?? "Public repos only. No sign in, no AI, no waiting."}
+        {error ?? "Public repos need no sign in. No AI, no waiting."}
       </p>
     </form>
   )

@@ -49,7 +49,7 @@ export default function Image() {
           paddingTop: 28,
         }}
       >
-        Deterministic signals. Public repos are free.
+        Deterministic checks. Quick scans are free.
       </div>
     </div>,
     size

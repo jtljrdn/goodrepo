@@ -1,9 +1,13 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
+import { HeroBackdrop } from "@/components/hero-backdrop"
 import { CopyButton } from "@/components/copy-button"
 import { CATEGORIES, type CategoryKey } from "@/lib/score"
 import { EXAMPLES, exampleHref } from "@/lib/examples"
+import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 
 const INSTALL_COMMAND = "npx skills add jtljrdn/goodrepo"
 
@@ -33,22 +37,44 @@ const TICKER: { points: string; text: string }[] = [
   { points: "+15", text: "Folders are named after domains, not types" },
 ]
 
+// Reads the session in its own Suspense boundary so the rest of the page stays prerendered.
+async function SignInNudge() {
+  if (!GITHUB_SIGN_IN_ENABLED || (await currentSession())) return null
+  return (
+    <p className="mt-6 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
+      <Link
+        href="/sign-in"
+        className="text-foreground underline-offset-4 hover:underline"
+      >
+        Sign in with GitHub
+      </Link>{" "}
+      to scan private repositories
+      {DEEP_SCAN_ENABLED
+        ? " or run a deep scan, where an AI reads the code itself"
+        : ""}
+      .
+    </p>
+  )
+}
+
 export default function Page() {
   return (
     <>
       <SiteHeader>
-        <span className="hidden sm:inline">Fast scan is free</span>
+        <span className="hidden sm:inline">Quick scan is free</span>
       </SiteHeader>
 
       <main className="mx-auto max-w-5xl sm:border-x sm:border-border/60">
-        <section className="px-6 py-16 sm:py-24">
+        <section className="relative isolate px-6 py-16 sm:py-24">
+          <HeroBackdrop />
           <h1 className="max-w-3xl text-4xl leading-[1.1] font-medium tracking-tight text-balance sm:text-5xl">
             How easy is your codebase for AI agents to work in?
           </h1>
           <p className="mt-5 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
-            Paste a repository. GoodRepo reads its structure, instructions, and
-            tooling, then scores agent readiness out of 100: {SIGNAL_COUNT}{" "}
-            measurable signals, with the evidence behind every point.
+            Paste a GitHub link. GoodRepo checks how the code is organized, what
+            instructions it leaves for AI tools, and how easy it is to test,
+            then gives it a score out of 100. {SIGNAL_COUNT} checks, each with
+            the reason behind it.
           </p>
           <div className="mt-8 max-w-2xl">
             <ScanForm />
@@ -65,11 +91,14 @@ export default function Page() {
               </Link>
             ))}
           </div>
+          <Suspense>
+            <SignInNudge />
+          </Suspense>
 
           <div className="mt-12 max-w-2xl border border-border/60">
             <div className="flex items-baseline justify-between gap-3 border-b border-border/60 px-4 py-2.5">
               <h2 className="text-xs font-medium">
-                Scan from inside your agent
+                Scan from inside your coding agent
               </h2>
             </div>
             <div className="flex items-center gap-3 bg-muted/30 px-4 py-3">
@@ -130,7 +159,7 @@ export default function Page() {
                     &ldquo;{CATEGORY_SAMPLES[category.key]}&rdquo;
                   </span>
                   <span className="shrink-0 tabular-nums">
-                    {category.signals.length} signals
+                    {category.signals.length} checks
                   </span>
                 </div>
               </li>

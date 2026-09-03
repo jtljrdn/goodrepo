@@ -39,7 +39,7 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Not reachable",
         detail:
-          "That repository or commit is private or does not exist. GoodRepo only scans public repositories.",
+          "That repository or commit does not exist, or GoodRepo cannot see it. Private repositories need a signed-in GitHub account with the GoodRepo app installed on them.",
       }
     case "rate-limited":
       return {
@@ -69,10 +69,9 @@ function reject(failure: ScanFailure): ScanResult {
 async function measure(
   owner: string,
   repo: string,
-  sha: string
+  sha: string,
+  token: string | undefined
 ): Promise<ScanResult> {
-  const token = process.env.GITHUB_TOKEN
-
   const meta = await fetchRepoMeta(owner, repo, token)
   if (isFailure(meta)) return reject(meta)
 
@@ -109,15 +108,21 @@ async function measure(
   return { ok: true, profile, overall, categories }
 }
 
-const cachedMeasure = cachedByCommit("scan", "v3", measure)
-
-export async function scanAtSha(
+// The cached wrapper takes only the three arguments the cache key is built from. Reading the
+// token inside keeps it out of that key, and keeps a rotated token from missing every entry.
+function measurePublic(
   owner: string,
   repo: string,
   sha: string
 ): Promise<ScanResult> {
+  return measure(owner, repo, sha, process.env.GITHUB_TOKEN)
+}
+
+const cachedMeasure = cachedByCommit("scan", "v4", measurePublic)
+
+async function settle(run: Promise<ScanResult>): Promise<ScanResult> {
   try {
-    return await cachedMeasure(owner, repo, sha)
+    return await run
   } catch (error) {
     if (isTransient(error)) {
       return {
@@ -130,6 +135,14 @@ export async function scanAtSha(
     }
     throw error
   }
+}
+
+export async function scanAtSha(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<ScanResult> {
+  return settle(cachedMeasure(owner, repo, sha))
 }
 
 const FULL_SHA = /^[0-9a-f]{40}$/
@@ -146,13 +159,14 @@ export function readSha(value: string | string[] | undefined): string | null {
 export async function resolveSha(
   owner: string,
   repo: string,
-  ref: string | null
+  ref: string | null,
+  token: string | undefined = process.env.GITHUB_TOKEN
 ): Promise<string | ScanFailure> {
   if (ref === "invalid")
     return { kind: "not-found", message: "That is not a commit sha." }
   if (ref !== null && FULL_SHA.test(ref)) return ref
 
-  return fetchHeadSha(owner, repo, ref ?? "HEAD", process.env.GITHUB_TOKEN)
+  return fetchHeadSha(owner, repo, ref ?? "HEAD", token)
 }
 
 export async function runScan(
@@ -164,4 +178,25 @@ export async function runScan(
   if (isFailure(sha)) return { ok: false, failure: sha }
 
   return scanAtSha(owner, repo, sha)
+}
+
+// Scans as the signed-in user rather than as the site, so it reaches whatever their GitHub
+// App installation covers. Deliberately never touches `scanAtSha`: that cache is keyed by
+// commit alone and is shared with anonymous visitors and the OG image, so one private report
+// written into it would be readable by anyone who guessed the URL.
+//
+// ponytail: private results are not cached at all. Only the one person who can see the repo
+// ever loads this page, so a per-user cache would buy little, and a permanent entry would
+// outlive the GitHub access that justified it. Add one keyed by (userId, owner, repo, sha)
+// with a bounded revalidate if reloads start costing real time.
+export async function runPrivateScan(
+  owner: string,
+  repo: string,
+  token: string,
+  ref: string | null = null
+): Promise<ScanResult> {
+  const sha = await resolveSha(owner, repo, ref, token)
+  if (isFailure(sha)) return { ok: false, failure: sha }
+
+  return settle(measure(owner, repo, sha, token))
 }

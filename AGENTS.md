@@ -10,10 +10,15 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 
 ### Entry points
 
-- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report and `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in. Scanning happens in server components, not API routes; the only route handler is
+- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report, `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in, and `app/[owner]/[repo]/private/page.tsx` the report for a repository only the signed-in user can see. Scanning happens in server components, not API routes; the only route handler is
 `app/api/auth/[...all]/route.ts`, which Better Auth owns. `app/sign-in/page.tsx` is the one
-account surface: sign in and create account share a form, and it is where the deep route sends
-anonymous visitors.
+account surface, and it is where the deep and private routes send anonymous visitors.
+
+**GitHub is the only way to sign in.** `emailAndPassword` is deliberately absent from
+`lib/auth.ts` rather than merely hidden in the UI, because the sign-in and sign-up email
+endpoints both gate on that flag: leaving it on while removing the form would keep the API
+open. It also means every account carries an email GitHub already verified, so this app sends
+no mail and owns no password reset. Re-adding email and password means owning both.
 - `packages/analyzer` — the scan engine. `src/index.ts` exports `analyze()` plus the GitHub fetch helpers; `src/detect/*` holds one deterministic detector per signal family; `src/source/github.ts` is the only code that talks to the GitHub API.
 - `packages/ui` — shared React components, Tailwind styles and the design tokens in `src/styles/globals.css`.
 - `packages/eslint-config`, `packages/typescript-config` — shared config only, no runtime code.
@@ -63,7 +68,18 @@ So new tables belong in `goodrepo`, fully qualified at every call site, with RLS
 belt and braces. Do not add them to `better_auth` either: that schema belongs to Better Auth's
 CLI.
 
-Both scans cache by commit through `cachedByCommit` in `lib/cache.ts`, which wraps
+**A private scan reads as the user and is never cached.** `runPrivateScan` in `lib/scan.ts`
+takes the reader's own GitHub token, so it sees exactly what their GitHub App installation
+covers and nothing else. It deliberately bypasses `scanAtSha`: that cache is keyed by
+`(owner, repo, sha)` with no user in the key, and it is shared with anonymous visitors, the
+crawler and the OG image, so a single private report written into it would be readable by
+anyone who guessed the URL. **Do not "unify" the two paths through one cached function.**
+Not caching also means a report cannot outlive the access that produced it. The route is
+`noindex`, its links are `prefetch={false}` and `rel="nofollow"`, and it renders with
+`deepAvailable={false}` because the deep scan clones as GoodRepo itself and cannot reach a
+private repository.
+
+Both *public* scans cache by commit through `cachedByCommit` in `lib/cache.ts`, which wraps
 `unstable_cache`. **Do not replace it with `use cache`.** Next composes its cache key from the
 build or deployment ID, so nothing cached that way survives a deploy, and the deep scan pays a
 model per miss. `unstable_cache` is what the Next reference itself names for data that must
@@ -131,8 +147,21 @@ in. A root `.env` is supported as a lower priority fallback but is not required.
 `GITHUB_TOKEN` only raises the GitHub API rate limit; fast scans of public
 repositories work without it. `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and
 `DATABASE_URL` are needed for anything behind sign-in, which today means only the
-deep scan. `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are a GitHub OAuth app,
+deep scan. `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are a GitHub **App**,
 unrelated to `GITHUB_TOKEN`; both must be present or `lib/auth.ts` registers no
-social provider and the button does not render, which is how a checkout without
-them still runs. Every one of these is declared in `turbo.json`'s task `env`
-lists as well, or Turbo caches across values that should have busted it.
+social provider, which is how a checkout without them still runs: the sign-in page
+says so and fast scans are unaffected. `GITHUB_APP_SLUG` only builds the install link. Every one of
+these is declared in `turbo.json`'s task `env` lists as well, or Turbo caches
+across values that should have busted it.
+
+**Not an OAuth app, and do not swap it back for one.** The user-to-server flow
+runs on the same two endpoints, so the Better Auth `github` provider is identical
+either way, but the access it grants is not. An OAuth app's only scope that opens
+a private repository is `repo`, which is read *and* write on every private
+repository the user can touch, granted in one click with no way to narrow it. A
+GitHub App gets repository `Contents` and `Metadata` read-only on the repositories
+the user installs it on, and on no others. That is why nothing in this app sets
+`scope`: a user token carries none, `disableDefaultScope` is on, and widening
+access means editing the app's permissions and re-consent, never editing code.
+Access still stops at the intersection of the app's permissions and the user's
+own, so the app can never read what the signed-in user could not.

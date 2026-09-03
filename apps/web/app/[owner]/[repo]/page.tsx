@@ -1,3 +1,5 @@
+import Link from "next/link"
+import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { alt } from "@/app/opengraph-image"
 import { failureMessage, readSha, runScan } from "@/lib/scan"
@@ -35,9 +37,25 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
 
   if (!result.ok) {
     const { title, detail } = failureMessage(result.failure)
+    const query = ref ? `?sha=${ref}` : ""
     return (
       <ReportShell owner={owner} repo={repo}>
-        <FailureCard title={title} detail={detail} />
+        <FailureCard title={title} detail={detail}>
+          {/* Offered without reading the session, which would make this page dynamic and
+              cost every public report its prerendered shell. The private route already
+              redirects a signed-out visitor to sign in. */}
+          {result.failure.kind === "not-found" ? (
+            <Link
+              href={`/${owner}/${repo}/private${query}`}
+              prefetch={false}
+              rel="nofollow"
+            >
+              <Button variant="outline" size="sm">
+                Scan it as a private repository
+              </Button>
+            </Link>
+          ) : null}
+        </FailureCard>
       </ReportShell>
     )
   }

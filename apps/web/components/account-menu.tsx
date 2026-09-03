@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { Menu } from "@base-ui/react/menu"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowDown01Icon, Logout03Icon } from "@hugeicons/core-free-icons"
@@ -25,13 +24,16 @@ export function AccountMenu({
   image: string | null
   allowance: string | null
 }) {
-  const router = useRouter()
   const [busy, setBusy] = React.useState(false)
 
+  // A full reload, not router.refresh(). The account strip is a server component behind a
+  // Suspense boundary in a partially prerendered page, and a refresh was leaving the signed-in
+  // version of it on screen. Reloading also drops any client state that outlived the session,
+  // which is what signing out should do anyway.
   async function signOut() {
     setBusy(true)
     await authClient.signOut()
-    router.refresh()
+    window.location.reload()
   }
 
   return (
