@@ -1,5 +1,5 @@
 import type { RepoProfile, SignalId } from "@/lib/profile"
-import type { ScoredCategory } from "@/lib/score"
+import { formatBytes, type ScoredCategory } from "@/lib/score"
 
 export type Recommendation = {
   id: SignalId
@@ -47,7 +47,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       impact: "High",
       source: "static",
       evidence: () =>
-        "Migration files were detected but nothing documents how to change the schema. Agents commonly hand-edit generated migration files when this is undocumented.",
+        "This project talks to a database but nothing documents how to change the schema. Agents commonly hand-edit generated migration files when this is undocumented.",
       fix: "Add a Database section to AGENTS.md describing:",
       bullets: [
         "Where the schema is defined",
@@ -135,16 +135,16 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       impact: "Medium",
       source: "static",
       evidence: () =>
-        "Environment variables are read at runtime but no template lists them. Agents cannot tell which variables a feature needs.",
+        "No template lists the environment variables this project needs, so an agent cannot tell which ones a feature depends on.",
       fix: "Commit a .env.example that lists every variable with a comment describing it.",
       bullets: [],
     },
     lowFanout: {
-      title: "Reduce the blast radius of common changes",
+      title: "Keep one change inside one folder",
       impact: "Medium",
       source: "deep",
-      evidence: () =>
-        "Adding one field appears to require edits in several distant modules. Every extra module is extra context an agent must load before it can act.",
+      evidence: (p) =>
+        `A typical file imports from ${p.measurements.lowFanout?.value ?? "several"} other folders in this repository. Every extra folder is extra context an agent must load before it can act.`,
       fix: "Group the pieces a change touches together:",
       bullets: [
         "Move types next to the code that owns them",
@@ -157,7 +157,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       impact: "Medium",
       source: "static",
       evidence: (p) =>
-        `The median file is ${p.medianFileBytes} lines and the largest is ${p.largestFileBytes}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
+        `The median file is ${formatBytes(p.medianFileBytes)} and the largest is ${formatBytes(p.largestFileBytes)}. Agents read whole files, so oversized files burn context on code unrelated to the task.`,
       fix: "Split the worst offenders along the boundaries they already have inside them.",
       bullets: [],
     },
@@ -166,7 +166,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       impact: "Low",
       source: "static",
       evidence: (p) =>
-        `Maximum directory depth is ${p.maxDirectoryDepth}. Deep paths are hard to guess, so agents fall back to listing directories.`,
+        `Nine in ten files sit ${p.measurements.shallowTree?.value ?? p.maxDirectoryDepth} levels deep. Deep paths are hard to guess, so agents fall back to listing directories.`,
       fix: "Flatten folders that only contain one child folder.",
       bullets: [],
     },
@@ -176,7 +176,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       source: "static",
       evidence: () =>
         "No CI workflow was found, so nothing independently verifies an agent's change.",
-      fix: "Add a workflow that runs install, lint, typecheck and test on every pull request.",
+      fix: "Add a GitHub Actions workflow that runs install, lint, typecheck and test on every pull request.",
       bullets: [],
     },
     colocatedTests: {

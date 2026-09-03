@@ -29,7 +29,10 @@ function build(files: Fixture[]) {
   return { entries, texts, sampled }
 }
 
-function run(files: Fixture[], truncated: Parameters<typeof analyze>[4] = null) {
+function run(
+  files: Fixture[],
+  truncated: Parameters<typeof analyze>[4] = null
+) {
   const { entries, texts, sampled } = build(files)
   return analyze(entries, texts, sampled, meta, truncated)
 }
@@ -37,14 +40,46 @@ function run(files: Fixture[], truncated: Parameters<typeof analyze>[4] = null) 
 const file = (path: string, text = ""): Fixture => ({ path, text })
 
 const ALL_SIGNALS: SignalId[] = [
-  "readme", "readmeDepth", "predictableRoot", "shallowTree", "colocatedTests", "generatedExcluded",
-  "agentsMd", "claudeMd", "docPackageManager", "docTestCommand", "docBuildCommand", "docArchitecture",
-  "docDatabase", "docApiConventions", "docCodeStyle",
-  "testScript", "testConfig", "testsExist", "typecheckScript", "singleTestDocumented", "ciRunsTests", "coverage",
-  "singleValidationLib", "consistentRouteShape", "consistentNaming", "singleDataLayer", "consistentErrors",
-  "lintConfig", "lockfile", "lintScript", "formatScript", "buildScript",
-  "envExample", "container", "ciWorkflow", "nodePinned",
-  "smallFiles", "noMegaFiles", "featureFolders", "lowFanout",
+  "readme",
+  "readmeDepth",
+  "predictableRoot",
+  "shallowTree",
+  "colocatedTests",
+  "generatedExcluded",
+  "agentsMd",
+  "claudeMd",
+  "docPackageManager",
+  "docTestCommand",
+  "docBuildCommand",
+  "docArchitecture",
+  "docDatabase",
+  "docApiConventions",
+  "docCodeStyle",
+  "testScript",
+  "testConfig",
+  "testsExist",
+  "typecheckScript",
+  "singleTestDocumented",
+  "ciRunsTests",
+  "coverage",
+  "singleValidationLib",
+  "consistentRouteShape",
+  "consistentNaming",
+  "singleDataLayer",
+  "consistentErrors",
+  "lintConfig",
+  "lockfile",
+  "lintScript",
+  "formatScript",
+  "buildScript",
+  "envExample",
+  "container",
+  "ciWorkflow",
+  "nodePinned",
+  "smallFiles",
+  "noMegaFiles",
+  "featureFolders",
+  "lowFanout",
 ]
 
 test("every signal is present in the profile", () => {
@@ -63,20 +98,32 @@ test("the two deep-scan signals are null, never false", () => {
 
 test("a healthy repository earns the signals it should", () => {
   const profile = run([
-      file("package.json", JSON.stringify({
+    file(
+      "package.json",
+      JSON.stringify({
         packageManager: "bun@1.3.10",
         engines: { node: ">=20" },
         dependencies: { zod: "^4.0.0" },
-        scripts: { build: "next build", dev: "next dev", test: "vitest run", lint: "eslint", typecheck: "tsc --noEmit" },
-      })),
-      file("bun.lock", null),
-      file("README.md", `# App\n\n## Architecture\n\n${"word ".repeat(320)}\n\nrun \`bun run test\` and \`bun run build\` and \`bun run dev\``),
-      file("AGENTS.md", "# Agents\n\nrules"),
-      file("eslint.config.js", "export default []"),
-      file("vitest.config.ts", "export default {}"),
-      file(".env.example", "DATABASE_URL="),
-      file("src/auth/login.ts", "import { z } from 'zod'\nconst a = 1\n"),
-      file("src/auth/login.test.ts", "import { test } from 'vitest'\n"),
+        scripts: {
+          build: "next build",
+          dev: "next dev",
+          test: "vitest run",
+          lint: "eslint",
+          typecheck: "tsc --noEmit",
+        },
+      })
+    ),
+    file("bun.lock", null),
+    file(
+      "README.md",
+      `# App\n\n## Architecture\n\n${"word ".repeat(320)}\n\nrun \`bun run test\` and \`bun run build\` and \`bun run dev\``
+    ),
+    file("AGENTS.md", "# Agents\n\nrules"),
+    file("eslint.config.js", "export default []"),
+    file("vitest.config.ts", "export default {}"),
+    file(".env.example", "DATABASE_URL="),
+    file("src/auth/login.ts", "import { z } from 'zod'\nconst a = 1\n"),
+    file("src/auth/login.test.ts", "import { test } from 'vitest'\n"),
     file("src/billing/plan.ts", "import { z } from 'zod'\n"),
   ])
   expect(profile.has.readme).toBe(true)
@@ -115,8 +162,34 @@ test("the sample size is reported so the report can disclose it", () => {
 })
 
 test("measurements accompany every thresholded signal", () => {
-  const profile = run([file("package.json", "{}"), file("src/a.ts", "const a = 1")])
-  for (const id of ["smallFiles", "noMegaFiles", "shallowTree", "consistentNaming"] as SignalId[]) {
+  const profile = run([
+    file("package.json", "{}"),
+    file("src/a.ts", "const a = 1"),
+  ])
+  for (const id of [
+    "smallFiles",
+    "noMegaFiles",
+    "shallowTree",
+    "consistentNaming",
+  ] as SignalId[]) {
     expect(profile.measurements[id], id).toBeDefined()
   }
+})
+
+test("checks that need a database, several routes or tests are skipped when the repo has none", () => {
+  const profile = run([
+    file("package.json", JSON.stringify({ scripts: { build: "tsc" } })),
+    file("README.md", "# Lib\n\nrun `npm run build`"),
+    file("src/index.ts", "export const a = 1"),
+    file("app/api/auth/[...all]/route.ts", "export const GET = () => null"),
+  ])
+  expect(profile.language).toBe("TypeScript")
+  expect(profile.has.docDatabase).toBeNull()
+  expect(profile.has.docApiConventions).toBeNull()
+  expect(profile.has.singleTestDocumented).toBeNull()
+  expect(profile.has.coverage).toBeNull()
+  expect(profile.has.ciRunsTests).toBeNull()
+  expect(profile.has.envExample).toBeNull()
+  expect(profile.has.docBuildCommand).toBe(true)
+  expect(profile.has.testScript).toBe(false)
 })

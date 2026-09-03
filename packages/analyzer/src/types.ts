@@ -1,18 +1,51 @@
 export type SignalId =
-  | "readme" | "readmeDepth" | "predictableRoot" | "shallowTree"
-  | "colocatedTests" | "generatedExcluded"
-  | "agentsMd" | "claudeMd" | "docPackageManager" | "docTestCommand"
-  | "docBuildCommand" | "docArchitecture" | "docDatabase"
-  | "docApiConventions" | "docCodeStyle"
-  | "testScript" | "testConfig" | "testsExist" | "typecheckScript"
-  | "singleTestDocumented" | "ciRunsTests" | "coverage"
-  | "singleValidationLib" | "consistentRouteShape" | "consistentNaming"
-  | "singleDataLayer" | "consistentErrors"
-  | "lintConfig" | "lockfile" | "lintScript" | "formatScript" | "buildScript"
-  | "envExample" | "container" | "ciWorkflow" | "nodePinned"
-  | "smallFiles" | "noMegaFiles" | "featureFolders" | "lowFanout"
+  | "readme"
+  | "readmeDepth"
+  | "predictableRoot"
+  | "shallowTree"
+  | "colocatedTests"
+  | "generatedExcluded"
+  | "agentsMd"
+  | "claudeMd"
+  | "docPackageManager"
+  | "docTestCommand"
+  | "docBuildCommand"
+  | "docArchitecture"
+  | "docDatabase"
+  | "docApiConventions"
+  | "docCodeStyle"
+  | "testScript"
+  | "testConfig"
+  | "testsExist"
+  | "typecheckScript"
+  | "singleTestDocumented"
+  | "ciRunsTests"
+  | "coverage"
+  | "singleValidationLib"
+  | "consistentRouteShape"
+  | "consistentNaming"
+  | "singleDataLayer"
+  | "consistentErrors"
+  | "lintConfig"
+  | "lockfile"
+  | "lintScript"
+  | "formatScript"
+  | "buildScript"
+  | "envExample"
+  | "container"
+  | "ciWorkflow"
+  | "nodePinned"
+  | "smallFiles"
+  | "noMegaFiles"
+  | "featureFolders"
+  | "lowFanout"
 
-export type Measurement = { value: number; threshold: number; unit: string }
+export type Measurement = {
+  value: number
+  threshold: number
+  unit: string
+  direction: "atLeast" | "atMost" | "lessThan"
+}
 
 export type TreeEntry = {
   path: string
@@ -35,6 +68,7 @@ export type CodeFileFacts = {
   path: string
   bytes: number
   imports: string[] | null
+  readsEnv?: boolean
 }
 
 export type SampleInfo = { sampled: number; total: number }

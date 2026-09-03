@@ -19,23 +19,40 @@ function headers(token?: string): Record<string, string> {
   return base
 }
 
-function failureFor(status: number, remaining: string | null): ScanFailure | null {
+function failureFor(
+  status: number,
+  remaining: string | null
+): ScanFailure | null {
   if (status === 404) {
-    return { kind: "not-found", message: "That repository is private or does not exist." }
+    return {
+      kind: "not-found",
+      message: "That repository is private or does not exist.",
+    }
   }
   if ((status === 403 || status === 429) && remaining === "0") {
-    return { kind: "rate-limited", message: "GitHub rate limit reached. Try again shortly." }
+    return {
+      kind: "rate-limited",
+      message: "GitHub rate limit reached. Try again shortly.",
+    }
   }
   return null
 }
 
 export function isFailure(value: unknown): value is ScanFailure {
-  return typeof value === "object" && value !== null && "kind" in value && "message" in value
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "kind" in value &&
+    "message" in value
+  )
 }
 
 export function classifyRepo(entries: TreeEntry[]): ScanFailure | null {
   if (entries.length === 0) {
-    return { kind: "empty", message: "This repository is empty, so there is nothing to analyze." }
+    return {
+      kind: "empty",
+      message: "This repository is empty, so there is nothing to analyze.",
+    }
   }
   if (!entries.some((e) => e.path === "package.json")) {
     return {
@@ -52,10 +69,16 @@ export async function fetchRepoMeta(
   repo: string,
   token?: string
 ): Promise<RepoMeta | ScanFailure> {
-  const res = await fetch(`${API}/repos/${owner}/${repo}`, { headers: headers(token) })
-  const failure = failureFor(res.status, res.headers.get("x-ratelimit-remaining"))
+  const res = await fetch(`${API}/repos/${owner}/${repo}`, {
+    headers: headers(token),
+  })
+  const failure = failureFor(
+    res.status,
+    res.headers.get("x-ratelimit-remaining")
+  )
   if (failure) return failure
-  if (!res.ok) return { kind: "not-found", message: "Could not reach that repository." }
+  if (!res.ok)
+    return { kind: "not-found", message: "Could not reach that repository." }
 
   const body: unknown = await res.json()
   if (typeof body !== "object" || body === null) {
@@ -67,8 +90,10 @@ export async function fetchRepoMeta(
     owner,
     repo,
     description: typeof data.description === "string" ? data.description : "",
-    stars: typeof data.stargazers_count === "number" ? data.stargazers_count : 0,
-    defaultBranch: typeof data.default_branch === "string" ? data.default_branch : "main",
+    stars:
+      typeof data.stargazers_count === "number" ? data.stargazers_count : 0,
+    defaultBranch:
+      typeof data.default_branch === "string" ? data.default_branch : "main",
     commitSha: "",
     commitMessage: "",
   }
@@ -89,13 +114,18 @@ export async function fetchHeadSha(
   const res = await fetch(`${API}/repos/${owner}/${repo}/commits/${ref}`, {
     headers: headers(token),
   })
-  const failure = failureFor(res.status, res.headers.get("x-ratelimit-remaining"))
+  const failure = failureFor(
+    res.status,
+    res.headers.get("x-ratelimit-remaining")
+  )
   if (failure) return failure
-  if (!res.ok) return { kind: "not-found", message: "Could not read the default branch." }
+  if (!res.ok)
+    return { kind: "not-found", message: "Could not read the default branch." }
 
   const body: unknown = await res.json()
   if (
-    typeof body === "object" && body !== null &&
+    typeof body === "object" &&
+    body !== null &&
     typeof (body as Record<string, unknown>).sha === "string"
   ) {
     return (body as Record<string, unknown>).sha as string
@@ -109,12 +139,19 @@ export async function fetchTree(
   sha: string,
   token?: string
 ): Promise<RepoTree | ScanFailure> {
-  const res = await fetch(`${API}/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`, {
-    headers: headers(token),
-  })
-  const failure = failureFor(res.status, res.headers.get("x-ratelimit-remaining"))
+  const res = await fetch(
+    `${API}/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`,
+    {
+      headers: headers(token),
+    }
+  )
+  const failure = failureFor(
+    res.status,
+    res.headers.get("x-ratelimit-remaining")
+  )
   if (failure) return failure
-  if (!res.ok) return { kind: "not-found", message: "Could not read the repository tree." }
+  if (!res.ok)
+    return { kind: "not-found", message: "Could not read the repository tree." }
 
   const body: unknown = await res.json()
   if (typeof body !== "object" || body === null) {
@@ -129,7 +166,10 @@ export async function fetchTree(
     const node = item as Record<string, unknown>
     if (node.type !== "blob") continue
     if (typeof node.path !== "string") continue
-    entries.push({ path: node.path, bytes: typeof node.size === "number" ? node.size : 0 })
+    entries.push({
+      path: node.path,
+      bytes: typeof node.size === "number" ? node.size : 0,
+    })
   }
 
   if (entries.length === 0) {
@@ -139,11 +179,21 @@ export async function fetchTree(
   return { entries, sha, truncated: data.truncated === true }
 }
 
-function buildQuery(owner: string, repo: string, sha: string, paths: string[]): string {
+function buildQuery(
+  owner: string,
+  repo: string,
+  sha: string,
+  paths: string[]
+): string {
   const fields = paths
-    .map((path, i) => `f${i}: object(expression: ${JSON.stringify(`${sha}:${path}`)}) {
+    .map(
+      (
+        path,
+        i
+      ) => `f${i}: object(expression: ${JSON.stringify(`${sha}:${path}`)}) {
       ... on Blob { text isBinary }
-    }`)
+    }`
+    )
     .join("\n")
   return `query { repository(owner: ${JSON.stringify(owner)}, name: ${JSON.stringify(repo)}) {
     ${fields}

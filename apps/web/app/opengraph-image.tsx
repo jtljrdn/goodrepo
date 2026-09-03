@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og"
 
-export const alt = "GoodRepo — agent-readiness score for any public GitHub repo"
+export const alt = "GoodRepo - agent-readiness score for any public GitHub repo"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
@@ -49,7 +49,7 @@ export default function Image() {
           paddingTop: 28,
         }}
       >
-        Deterministic signals. No tokens. Public repos are free.
+        Deterministic signals. Public repos are free.
       </div>
     </div>,
     size

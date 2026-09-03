@@ -19,8 +19,19 @@
         "!.next/cache/**"
       ],
       "env": [
+        "AI_GATEWAY_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
-        "VERCEL_PROJECT_PRODUCTION_URL"
+        "GOODREPO_DEEP_SCAN",
+        "GOODREPO_MODEL",
+        "GOODREPO_MONTHLY_DEEP_SCANS",
+        "VERCEL_OIDC_TOKEN",
+        "VERCEL_PROJECT_PRODUCTION_URL",
+        "SUPABASE_DATABASE_PASSWORD"
       ]
     },
     "lint": {
@@ -28,7 +39,17 @@
         "^lint"
       ],
       "env": [
+        "AI_GATEWAY_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
+        "GOODREPO_DEEP_SCAN",
+        "GOODREPO_MODEL",
+        "GOODREPO_MONTHLY_DEEP_SCANS",
+        "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
@@ -51,7 +72,17 @@
       "cache": false,
       "persistent": true,
       "env": [
+        "AI_GATEWAY_API_KEY",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_URL",
+        "DATABASE_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
+        "GOODREPO_DEEP_SCAN",
+        "GOODREPO_MODEL",
+        "GOODREPO_MONTHLY_DEEP_SCANS",
+        "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     }

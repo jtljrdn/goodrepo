@@ -12,8 +12,7 @@ import {
   type RepoProfile,
   type ScanFailure,
 } from "@workspace/analyzer"
-import { cacheLife } from "next/cache"
-import { pinnedSha } from "@/lib/examples"
+import { cachedByCommit, isTransient, TRANSIENT } from "@/lib/cache"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
 export type ScanResult =
@@ -40,7 +39,7 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Not reachable",
         detail:
-          "That repository is private or does not exist. GoodRepo only scans public repositories.",
+          "That repository or commit is private or does not exist. GoodRepo only scans public repositories.",
       }
     case "rate-limited":
       return {
@@ -62,21 +61,23 @@ export function failureMessage(failure: ScanFailure): {
   }
 }
 
-async function scanAtSha(
+function reject(failure: ScanFailure): ScanResult {
+  if (failure.kind === "rate-limited") throw new Error(TRANSIENT)
+  return { ok: false, failure }
+}
+
+async function measure(
   owner: string,
   repo: string,
   sha: string
 ): Promise<ScanResult> {
-  "use cache: remote"
-  cacheLife("max")
-
   const token = process.env.GITHUB_TOKEN
 
   const meta = await fetchRepoMeta(owner, repo, token)
-  if (isFailure(meta)) return { ok: false, failure: meta }
+  if (isFailure(meta)) return reject(meta)
 
   const tree = await fetchTree(owner, repo, sha, token)
-  if (isFailure(tree)) return { ok: false, failure: tree }
+  if (isFailure(tree)) return reject(tree)
 
   const rejection = classifyRepo(tree.entries)
   if (rejection) return { ok: false, failure: rejection }
@@ -108,14 +109,58 @@ async function scanAtSha(
   return { ok: true, profile, overall, categories }
 }
 
+const cachedMeasure = cachedByCommit("scan", "v3", measure)
+
+export async function scanAtSha(
+  owner: string,
+  repo: string,
+  sha: string
+): Promise<ScanResult> {
+  try {
+    return await cachedMeasure(owner, repo, sha)
+  } catch (error) {
+    if (isTransient(error)) {
+      return {
+        ok: false,
+        failure: {
+          kind: "rate-limited",
+          message: "GitHub rate limit reached. Try again shortly.",
+        },
+      }
+    }
+    throw error
+  }
+}
+
+const FULL_SHA = /^[0-9a-f]{40}$/
+const SHA_PREFIX = /^[0-9a-f]{7,40}$/i
+
+// The ref is interpolated into a GitHub URL, so only a hex commit prefix gets through.
+export function readSha(value: string | string[] | undefined): string | null {
+  if (value === undefined) return null
+  return typeof value === "string" && SHA_PREFIX.test(value)
+    ? value.toLowerCase()
+    : "invalid"
+}
+
+export async function resolveSha(
+  owner: string,
+  repo: string,
+  ref: string | null
+): Promise<string | ScanFailure> {
+  if (ref === "invalid")
+    return { kind: "not-found", message: "That is not a commit sha." }
+  if (ref !== null && FULL_SHA.test(ref)) return ref
+
+  return fetchHeadSha(owner, repo, ref ?? "HEAD", process.env.GITHUB_TOKEN)
+}
+
 export async function runScan(
   owner: string,
-  repo: string
+  repo: string,
+  ref: string | null = null
 ): Promise<ScanResult> {
-  const pinned = pinnedSha(owner, repo)
-  if (pinned) return scanAtSha(owner, repo, pinned)
-
-  const sha = await fetchHeadSha(owner, repo, "HEAD", process.env.GITHUB_TOKEN)
+  const sha = await resolveSha(owner, repo, ref)
   if (isFailure(sha)) return { ok: false, failure: sha }
 
   return scanAtSha(owner, repo, sha)

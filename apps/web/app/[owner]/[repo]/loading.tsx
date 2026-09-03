@@ -1,12 +1,12 @@
 import { SiteHeader } from "@/components/site-header"
 
 const STEPS = [
-  "Fetching repository tree",
-  "Reading agent instructions",
-  "Detecting build tooling",
-  "Locating tests",
-  "Sampling architecture",
-  "Scoring signals",
+  "Listing the files",
+  "Reading the instructions",
+  "Checking the build tools",
+  "Finding the tests",
+  "Reading the folder layout",
+  "Adding up the score",
 ]
 
 export default function Loading() {

@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test"
-import { chooseConfigFiles, chooseSample, collect, extractImports } from "./collect"
+import {
+  chooseConfigFiles,
+  chooseSample,
+  collect,
+  extractImports,
+} from "./collect"
 import type { TreeEntry } from "./types"
 
 const entry = (path: string, bytes = 100): TreeEntry => ({ path, bytes })
@@ -25,7 +30,12 @@ test("ignores import-like text inside comments and strings", () => {
 
 test("records every path and sizes every code file from the tree", () => {
   const facts = collect(
-    [entry("package.json", 12), entry("src/a.ts", 480), entry("public/logo.png", 900), entry("README.md", 7)],
+    [
+      entry("package.json", 12),
+      entry("src/a.ts", 480),
+      entry("public/logo.png", 900),
+      entry("README.md", 7),
+    ],
     new Map([["package.json", '{"name":"x"}']]),
     new Set()
   )
@@ -37,7 +47,10 @@ test("records every path and sizes every code file from the tree", () => {
 test("only sampled files carry imports; the rest are null", () => {
   const facts = collect(
     [entry("src/a.ts"), entry("src/b.ts")],
-    new Map([["src/a.ts", "import { z } from 'zod'"], ["src/b.ts", "import x from 'y'"]]),
+    new Map([
+      ["src/a.ts", "import { z } from 'zod'"],
+      ["src/b.ts", "import x from 'y'"],
+    ]),
     new Set(["src/a.ts"])
   )
   expect(facts.codeFiles[0]!.imports).toEqual(["zod"])
@@ -48,7 +61,11 @@ test("only sampled files carry imports; the rest are null", () => {
 test("keeps the text of config and doc files only", () => {
   const facts = collect(
     [entry("package.json"), entry("README.md"), entry("src/a.ts")],
-    new Map([["package.json", '{"a":1}'], ["README.md", "# Hi"], ["src/a.ts", "const a = 1"]]),
+    new Map([
+      ["package.json", '{"a":1}'],
+      ["README.md", "# Hi"],
+      ["src/a.ts", "const a = 1"],
+    ]),
     new Set(["src/a.ts"])
   )
   expect(facts.keptText.get("package.json")).toBe('{"a":1}')
@@ -89,21 +106,33 @@ test("chooseSample prefers source files over test files", () => {
 })
 
 test("chooseSample skips files too large to fetch", () => {
-  const entries = [entry("src/huge.ts", 5 * 1024 * 1024), entry("src/small.ts", 10)]
+  const entries = [
+    entry("src/huge.ts", 5 * 1024 * 1024),
+    entry("src/small.ts", 10),
+  ]
   expect(chooseSample(entries, 200)).toEqual(["src/small.ts"])
 })
 
 test("chooseConfigFiles picks the known config and doc files", () => {
   const chosen = chooseConfigFiles([
-    entry("package.json"), entry("README.md"), entry(".github/workflows/ci.yml"),
-    entry("src/a.ts"), entry("public/logo.png"),
+    entry("package.json"),
+    entry("README.md"),
+    entry(".github/workflows/ci.yml"),
+    entry("src/a.ts"),
+    entry("public/logo.png"),
   ])
-  expect(chosen.sort()).toEqual([".github/workflows/ci.yml", "README.md", "package.json"])
+  expect(chosen.sort()).toEqual([
+    ".github/workflows/ci.yml",
+    "README.md",
+    "package.json",
+  ])
 })
 
 test("chooseConfigFiles ignores nested config files that no detector reads", () => {
   const entries = [
-    ...Array.from({ length: 300 }, (_, i) => entry(`packages/p${i}/package.json`)),
+    ...Array.from({ length: 300 }, (_, i) =>
+      entry(`packages/p${i}/package.json`)
+    ),
     entry("README.md"),
     entry("package.json"),
   ]

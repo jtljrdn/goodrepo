@@ -1,6 +1,11 @@
-import type { Measurement, RepoProfile } from "@/lib/profile"
-import type { ScoredCategory } from "@/lib/score"
-import { band, formatBytes } from "@/lib/score"
+import type {
+  Measurement,
+  RepoProfile,
+  SignalId,
+  SignalVerdict,
+} from "@/lib/profile"
+import type { ScoredCategory, SignalStatus } from "@/lib/score"
+import { band, formatBytes, signalSubject } from "@/lib/score"
 import type { Recommendation } from "@/lib/recommendations"
 import { cn } from "@workspace/ui/lib/utils"
 
@@ -19,7 +24,7 @@ const BAND_BG = {
 const BAND_LABEL = {
   good: "Agent ready",
   fair: "Needs work",
-  poor: "High friction",
+  poor: "Hard for agents",
 } as const
 
 const IMPACT_STYLE = {
@@ -52,10 +57,21 @@ function percent(value: number): string {
   return `${Number((value * 100).toFixed(1))}%`
 }
 
-function formatMeasurement({ value, threshold, unit }: Measurement): string {
-  if (unit === "share")
-    return `${percent(value)} · passes at ${percent(threshold)}`
-  return `${value.toLocaleString()} ${unit} · threshold ${threshold.toLocaleString()}`
+function formatMeasurement({
+  value,
+  threshold,
+  unit,
+  direction,
+}: Measurement): string {
+  const show = (n: number) =>
+    unit === "share" ? percent(n) : `${n.toLocaleString()} ${unit}`
+  const rule =
+    direction === "atLeast"
+      ? `needs ${show(threshold)} or more`
+      : direction === "atMost"
+        ? `limit ${show(threshold)}`
+        : `must stay under ${show(threshold)}`
+  return `${show(value)} · ${rule}`
 }
 
 const SIGNAL_MARK = { pass: "✓", fail: "⚠", "not-measured": "–" } as const
@@ -123,7 +139,7 @@ export function ReportHeadline({
     profile.language,
     `${profile.files.toLocaleString()} files`,
     formatBytes(profile.totalBytes),
-    profile.packageManager ?? "no package manager",
+    profile.packageManager ?? "no lockfile",
   ].filter((item): item is string => item !== null)
 
   return (
@@ -142,7 +158,7 @@ export function ReportHeadline({
             tone ? BAND_TEXT[tone] : "text-muted-foreground"
           )}
         >
-          {tone ? BAND_LABEL[tone] : "No categories could be scored"}
+          {tone ? BAND_LABEL[tone] : "Nothing could be scored"}
         </p>
         <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {meta.map((item) => (
@@ -252,7 +268,7 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
                   ? `+${signal.points}`
                   : signal.status === "fail"
                     ? `0 / ${signal.points}`
-                    : "not scored"}
+                    : "skipped"}
               </span>
             </li>
           ))}
@@ -319,34 +335,87 @@ export function RecommendationItem({
   )
 }
 
-export function ProfileBlock({ profile }: { profile: RepoProfile }) {
-  const compact = {
-    framework: profile.framework,
-    files: profile.files,
-    maxDirectoryDepth: profile.maxDirectoryDepth,
-    medianFileBytes: profile.medianFileBytes,
-    packageManager: profile.packageManager,
-    scripts: profile.scripts,
-    testFramework: profile.testFramework,
-    testFiles: profile.testFiles,
-    apiRoutes: profile.apiRoutes,
-    validationPatterns: profile.validationPatterns,
-    docs: profile.docs,
-  }
+const REACH_LABEL = {
+  most: "most of the relevant code",
+  some: "some of the relevant code",
+  few: "a few places",
+} as const
 
+function blobUrl(profile: RepoProfile, path: string): string {
+  return `https://github.com/${profile.owner}/${profile.repo}/blob/${profile.commitSha}/${path}`
+}
+
+export function DeepVerdicts({
+  verdicts,
+  profile,
+}: {
+  verdicts: SignalVerdict[]
+  profile: RepoProfile
+}) {
   return (
-    <details className="group border-t border-border/60">
-      <summary className="flex cursor-pointer list-none items-center gap-4 py-3 transition-colors hover:bg-muted/50">
-        <span className="w-4 text-xs text-muted-foreground group-open:rotate-90">
-          ›
-        </span>
-        <span className="flex-1 font-sans text-xs text-muted-foreground">
-          The compact structure a deep scan would send to the model
-        </span>
-      </summary>
-      <pre className="mb-2 overflow-x-auto border border-border/60 bg-muted/40 p-4 text-[11px] leading-relaxed">
-        {JSON.stringify(compact, null, 2)}
-      </pre>
-    </details>
+    <ul className="border-t border-border/60">
+      {verdicts.map((verdict) => {
+        const value = profile.has[verdict.signal as SignalId]
+        const status: SignalStatus =
+          value === null || value === undefined
+            ? "not-measured"
+            : value
+              ? "pass"
+              : "fail"
+
+        return (
+          <li
+            key={verdict.signal}
+            className="flex items-start gap-2.5 border-b border-border/60 py-5 last:border-b-0"
+          >
+            <span
+              className={cn("mt-0.5 w-3 shrink-0 text-xs", SIGNAL_TONE[status])}
+            >
+              {SIGNAL_MARK[status]}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <h3 className="text-sm font-medium">
+                  {signalSubject(verdict.signal as SignalId)}
+                </h3>
+                <span className="text-[10px] text-muted-foreground/60">
+                  {verdict.applicable
+                    ? verdict.patterns.length === 1
+                      ? "done one way"
+                      : `done ${verdict.patterns.length} different ways`
+                    : "nothing like this in the repository"}
+                </span>
+              </div>
+              <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
+                {verdict.reason}
+              </p>
+              {verdict.patterns.length > 0 ? (
+                <ul className="mt-3 divide-y divide-border/60 border border-border/60 bg-muted/40">
+                  {verdict.patterns.map((pattern) => (
+                    <li
+                      key={`${pattern.pattern}:${pattern.path}`}
+                      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-3 py-2 text-xs"
+                    >
+                      <span>{pattern.pattern}</span>
+                      <span className="text-muted-foreground/60">
+                        {REACH_LABEL[pattern.reach]}
+                      </span>
+                      <a
+                        href={blobUrl(profile, pattern.path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-auto max-w-full truncate text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+                      >
+                        {pattern.path}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

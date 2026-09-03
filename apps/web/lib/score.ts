@@ -1,3 +1,4 @@
+import { AGENT_SIGNALS } from "@workspace/analyzer"
 import type { Measurement, RepoProfile, SignalId } from "@/lib/profile"
 
 export type Signal = {
@@ -63,22 +64,23 @@ export const CATEGORIES: CategoryDef[] = [
         (p) =>
           `README covers the project in depth (${p.docs.readmeWords} words)`,
         (p) =>
-          `README is thin (${p.docs.readmeWords} words) — mostly a title and install line`
+          `README is thin (${p.docs.readmeWords} words), mostly a title and install line`
       ),
       s(
         "predictableRoot",
         15,
-        "Source under one predictable root",
-        "Source lives under a single predictable root",
-        "Source is split across several unrelated top-level folders"
+        "Source under predictable roots",
+        "Source lives under folders an agent can guess (src, app, lib, workspaces)",
+        "Source is split across top-level folders an agent has to discover"
       ),
       s(
         "shallowTree",
         15,
         "Directory depth",
         (p) =>
-          `Directory tree stays shallow (max depth ${p.maxDirectoryDepth})`,
-        (p) => `Directory tree is deep (max depth ${p.maxDirectoryDepth})`
+          `Directory tree stays shallow (9 in 10 files within ${p.measurements.shallowTree?.value ?? p.maxDirectoryDepth} levels)`,
+        (p) =>
+          `Directory tree is deep (9 in 10 files need ${p.measurements.shallowTree?.value ?? p.maxDirectoryDepth} levels)`
       ),
       s(
         "colocatedTests",
@@ -90,9 +92,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "generatedExcluded",
         15,
-        "Generated output excluded",
-        "Generated output is ignored and excluded",
-        "Generated output is committed alongside source"
+        "Build output kept out of the repo",
+        "Build output is not committed",
+        "Build output is committed next to the source"
       ),
     ],
   },
@@ -108,7 +110,13 @@ export const CATEGORIES: CategoryDef[] = [
         (p) => `AGENTS.md exists (${p.docs.agentsMdWords} words)`,
         "No AGENTS.md"
       ),
-      s("claudeMd", 5, "CLAUDE.md", "CLAUDE.md present", "No CLAUDE.md"),
+      s(
+        "claudeMd",
+        5,
+        "Tool-specific instructions",
+        "Tool-specific instructions present (CLAUDE.md, Cursor rules or similar)",
+        "No tool-specific instruction file (CLAUDE.md, Cursor rules or similar)"
+      ),
       s(
         "docPackageManager",
         10,
@@ -175,9 +183,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "testConfig",
         15,
-        "Test framework config",
-        (p) => `Test framework config detected (${p.testFramework})`,
-        "No test framework config detected"
+        "Test framework",
+        (p) => `Test framework detected (${p.testFramework})`,
+        "No test framework detected in config or the test script"
       ),
       s(
         "testsExist",
@@ -191,7 +199,7 @@ export const CATEGORIES: CategoryDef[] = [
         15,
         "typecheck script",
         "typecheck script defined",
-        "No typecheck script — agents cannot check types in one command"
+        "No typecheck script, so an agent cannot check types in one command"
       ),
       s(
         "singleTestDocumented",
@@ -241,8 +249,8 @@ export const CATEGORIES: CategoryDef[] = [
         "consistentNaming",
         15,
         "Uniform file naming",
-        "File and export naming is uniform",
-        "File naming mixes conventions"
+        "Files in each folder follow one naming convention",
+        "Folders mix naming conventions, so an agent cannot guess a file name"
       ),
       s(
         "singleDataLayer",
@@ -261,9 +269,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "lintConfig",
         15,
-        "Lint config enforcing conventions",
-        "Lint config enforces the conventions",
-        "No lint config enforcing conventions"
+        "Lint config",
+        "A linter enforces the code conventions",
+        "No linter config, so conventions are not enforced"
       ),
     ],
   },
@@ -276,8 +284,9 @@ export const CATEGORIES: CategoryDef[] = [
         "lockfile",
         15,
         "Lockfile and pinned package manager",
-        (p) => `Lockfile and pinned package manager (${p.packageManager})`,
-        "No lockfile or pinned package manager"
+        (p) =>
+          `Lockfile present and package manager pinned (${p.packageManager})`,
+        "No lockfile, or the package manager version is not pinned"
       ),
       s(
         "buildScript",
@@ -304,8 +313,8 @@ export const CATEGORIES: CategoryDef[] = [
         "envExample",
         15,
         "Environment variable template",
-        ".env.example lists required variables",
-        "No .env.example — required env vars are unknown"
+        ".env.example lists the required settings",
+        "No .env.example, so the required settings are unknown"
       ),
       s(
         "container",
@@ -339,30 +348,31 @@ export const CATEGORIES: CategoryDef[] = [
         "smallFiles",
         20,
         "Median file size",
-        (p) => `Median file is ${formatBytes(p.medianFileBytes)}`,
+        (p) => `A typical file is ${formatBytes(p.medianFileBytes)}`,
         (p) =>
-          `Median file is ${formatBytes(p.medianFileBytes)}, so most edits pull in a lot of context`
+          `A typical file is ${formatBytes(p.medianFileBytes)}, so most edits mean reading a lot`
       ),
       s(
         "noMegaFiles",
         15,
         "Largest file size",
         (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`,
-        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`
+        (p) =>
+          `Largest file is ${formatBytes(p.largestFileBytes)}, too big to read in one go`
       ),
       s(
         "featureFolders",
         25,
         "Folders named by feature",
         "Source folders are named after features, not file types",
-        "Source folders are named after file types (components, hooks, utils), so one change is spread across them"
+        "Source folders are named after file types (components, hooks, utils), so one change touches several of them"
       ),
       s(
         "lowFanout",
         20,
         "Change fan-out across modules",
-        "Common changes stay inside one module",
-        "Common changes touch many modules at once"
+        "A typical file reaches into few other folders",
+        "A typical file reaches into many other folders, so one change means reading many of them"
       ),
     ],
   },
@@ -370,10 +380,21 @@ export const CATEGORIES: CategoryDef[] = [
 
 export type SignalStatus = "pass" | "fail" | "not-measured"
 
-const DEEP_SCAN_ONLY = new Set<SignalId>([
-  "consistentRouteShape",
-  "consistentErrors",
-])
+const EMPTY: ReadonlySet<SignalId> = new Set()
+
+export const DEEP_SCAN_ONLY: ReadonlySet<SignalId> = new Set(
+  Object.keys(AGENT_SIGNALS) as SignalId[]
+)
+
+const SUBJECTS = new Map<SignalId, string>(
+  CATEGORIES.flatMap((category) =>
+    category.signals.map((signal) => [signal.id, signal.subject] as const)
+  )
+)
+
+export function signalSubject(id: SignalId): string {
+  return SUBJECTS.get(id) ?? id
+}
 
 export type ScoredSignal = {
   id: SignalId
@@ -395,14 +416,17 @@ export type ScoredCategory = {
 
 export function scoreCategory(
   def: CategoryDef,
-  p: RepoProfile
+  p: RepoProfile,
+  answered: ReadonlySet<SignalId> = EMPTY
 ): ScoredCategory {
   const signals: ScoredSignal[] = def.signals.map((sig) => {
     const value = p.has[sig.id]
     if (value === null || value === undefined) {
-      const reason = DEEP_SCAN_ONLY.has(sig.id)
-        ? "needs a deep scan"
-        : "does not apply to this repository"
+      const reason = answered.has(sig.id)
+        ? "nothing like this in the repository"
+        : DEEP_SCAN_ONLY.has(sig.id)
+          ? "needs a deep scan"
+          : "does not apply here"
       return {
         id: sig.id,
         points: sig.points,
@@ -438,8 +462,11 @@ export function scoreCategory(
   }
 }
 
-export function scoreRepo(p: RepoProfile) {
-  const categories = CATEGORIES.map((def) => scoreCategory(def, p))
+export function scoreRepo(
+  p: RepoProfile,
+  answered: ReadonlySet<SignalId> = EMPTY
+) {
+  const categories = CATEGORIES.map((def) => scoreCategory(def, p, answered))
   const scored = categories.filter(
     (c): c is ScoredCategory & { score: number } => c.score !== null
   )

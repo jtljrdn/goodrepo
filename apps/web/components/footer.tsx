@@ -21,7 +21,7 @@ export async function Footer() {
   const stars = await starCount()
 
   return (
-    <footer className="mt-16 border-t border-border/60">
+    <footer className="border-t border-border/60">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 px-6 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
         <span>© {new Date().getFullYear()} GoodRepo</span>
         <nav className="flex flex-wrap items-center gap-4 sm:ml-auto">

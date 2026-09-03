@@ -3,4 +3,5 @@ export type {
   RepoMeta,
   RepoProfile,
   SignalId,
+  SignalVerdict,
 } from "@workspace/analyzer"

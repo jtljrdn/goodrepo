@@ -1,3 +1,5 @@
+import type { Measurement } from "./types"
+
 export const THRESHOLDS = {
   readmeWords: { threshold: 300, unit: "words", direction: "atLeast" },
   maxDepth: { threshold: 7, unit: "levels", direction: "atMost" },
@@ -14,10 +16,26 @@ export const THRESHOLDS = {
 
 export type ThresholdKey = keyof typeof THRESHOLDS
 
+export function measure(key: ThresholdKey, value: number): Measurement {
+  const { threshold, unit, direction } = THRESHOLDS[key]
+  return { value, threshold, unit, direction }
+}
+
 export const CAPS = {
   importSample: 200,
   configFiles: 40,
   perFileBytes: 2 * 1024 * 1024,
+  sandboxVcpus: 2,
+  sandboxTimeoutMs: 5 * 60_000,
+  deepMaxSteps: 40,
+  deepReadBytes: 16_000,
+  deepGrepMatches: 25,
+  deepMaxFindings: 12,
+  deepMaxClaims: 40,
+  deepLandingSteps: 5,
+  deepStepsPerSignal: 8,
+  deepMaxPatterns: 6,
+  deepDocBytes: 12_000,
 } as const
 
 export function passes(key: ThresholdKey, value: number): boolean {

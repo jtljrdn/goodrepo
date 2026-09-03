@@ -1,24 +1,58 @@
 import { CAPS } from "./thresholds"
 
-// "build" and "out" are omitted on purpose: both are commonly source directories.
 export const GENERATED_DIRS = [
-  "dist", ".next", "coverage", ".turbo", ".output", ".svelte-kit",
+  "dist",
+  ".next",
+  "coverage",
+  ".turbo",
+  ".output",
+  ".svelte-kit",
 ] as const
 
 const SKIP_DIRS = new Set<string>([
-  ...GENERATED_DIRS, "node_modules", ".git", "vendor", "target", "__pycache__",
+  ...GENERATED_DIRS,
+  "node_modules",
+  ".git",
+  "vendor",
+  "target",
+  "__pycache__",
 ])
 
-const CODE_EXT = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"])
+const CODE_EXT = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".mts",
+  ".cts",
+])
 
 const LOCKFILES = new Set([
-  "bun.lock", "bun.lockb", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+  "bun.lock",
+  "bun.lockb",
+  "package-lock.json",
+  "pnpm-lock.yaml",
+  "yarn.lock",
 ])
 
 const KEPT_FILES = new Set([
-  "package.json", "tsconfig.json", "readme.md", "agents.md", "claude.md", "contributing.md",
-  ".env.example", ".env.sample", ".env.template", "dockerfile",
-  "compose.yaml", "compose.yml", "docker-compose.yml", ".nvmrc", ".node-version",
+  "package.json",
+  "tsconfig.json",
+  "readme.md",
+  "agents.md",
+  "claude.md",
+  "contributing.md",
+  ".env.example",
+  ".env.sample",
+  ".env.template",
+  "dockerfile",
+  "compose.yaml",
+  "compose.yml",
+  "docker-compose.yml",
+  ".nvmrc",
+  ".node-version",
 ])
 
 const KEPT_PREFIXES = [".github/workflows/", ".devcontainer/", ".cursor/rules"]
@@ -51,6 +85,12 @@ export function isCodeFile(path: string): boolean {
   if (base(path).endsWith(".min.js")) return false
   if (path.includes(".d.ts")) return false
   return CODE_EXT.has(ext(path))
+}
+
+export function isDocFile(path: string): boolean {
+  if (isSkippedPath(path)) return false
+  const name = base(path)
+  return name.endsWith(".md") && KEPT_FILES.has(name)
 }
 
 export function isTestFile(path: string): boolean {

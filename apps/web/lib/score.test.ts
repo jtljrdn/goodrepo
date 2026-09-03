@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test"
 import type { RepoProfile, SignalId } from "@/lib/profile"
-import { CATEGORIES, scoreCategory, scoreRepo } from "@/lib/score"
+import {
+  CATEGORIES,
+  DEEP_SCAN_ONLY,
+  scoreCategory,
+  scoreRepo,
+} from "@/lib/score"
 
 function profileWith(
   has: Partial<Record<SignalId, boolean | null>>
@@ -108,4 +113,31 @@ test("the overall score averages only the categories that produced a score", () 
   )
   expect(result.overall).toBe(0)
   expect(result.categories).toHaveLength(6)
+})
+
+test("a deep-scan-only signal says so until a deep scan answers it", () => {
+  const profile = profileWith({ consistentRouteShape: null })
+
+  const pending = scoreRepo(profile)
+    .categories.flatMap((c) => c.signals)
+    .find((s) => s.id === "consistentRouteShape")
+  expect(pending?.text).toContain("needs a deep scan")
+
+  const answered = scoreRepo(
+    profile,
+    new Set<SignalId>(["consistentRouteShape"])
+  )
+    .categories.flatMap((c) => c.signals)
+    .find((s) => s.id === "consistentRouteShape")
+  expect(answered?.status).toBe("not-measured")
+  expect(answered?.text).toContain("nothing like this")
+})
+
+test("every signal the agent can answer is marked as needing a deep scan", () => {
+  for (const id of DEEP_SCAN_ONLY) {
+    const signal = scoreRepo(profileWith({ [id]: null }))
+      .categories.flatMap((c) => c.signals)
+      .find((s) => s.id === id)
+    expect(signal?.text, id).toContain("needs a deep scan")
+  }
 })

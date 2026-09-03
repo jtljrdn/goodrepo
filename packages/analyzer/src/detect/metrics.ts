@@ -1,11 +1,7 @@
-import { passes, THRESHOLDS } from "../thresholds"
+import { measure, passes } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
 type Casing = "kebab" | "camel" | "pascal" | "snake"
-
-function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return { value, threshold: THRESHOLDS[key].threshold, unit: THRESHOLDS[key].unit }
-}
 
 function median(values: number[]): number {
   if (values.length === 0) return 0
@@ -13,6 +9,11 @@ function median(values: number[]): number {
   const mid = Math.floor(sorted.length / 2)
   if (sorted.length % 2 === 1) return sorted[mid] ?? 0
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
+}
+
+function dirOf(path: string): string {
+  const slash = path.lastIndexOf("/")
+  return slash === -1 ? "" : path.slice(0, slash)
 }
 
 function casingOf(path: string): Casing {
@@ -24,6 +25,30 @@ function casingOf(path: string): Casing {
   return "kebab"
 }
 
+// Naming is judged folder by folder: PascalCase components beside kebab-case
+// utilities is a convention, two casings inside one folder is not.
+function namingConsistency(paths: string[]): number | null {
+  const byDir = new Map<string, Map<Casing, number>>()
+  for (const path of paths) {
+    if (/^index\.[cm]?[jt]sx?$/.test(path.slice(path.lastIndexOf("/") + 1)))
+      continue
+    const dir = dirOf(path)
+    const counts = byDir.get(dir) ?? new Map<Casing, number>()
+    const casing = casingOf(path)
+    counts.set(casing, (counts.get(casing) ?? 0) + 1)
+    byDir.set(dir, counts)
+  }
+  let dominant = 0
+  let total = 0
+  for (const counts of byDir.values()) {
+    const files = [...counts.values()].reduce((n, c) => n + c, 0)
+    if (files < 2) continue
+    dominant += Math.max(...counts.values())
+    total += files
+  }
+  return total === 0 ? null : dominant / total
+}
+
 export function detectMetrics(facts: RawFacts) {
   const sizes = facts.codeFiles.map((f) => f.bytes)
   const medianFileBytes = Math.round(median(sizes))
@@ -33,14 +58,8 @@ export function detectMetrics(facts: RawFacts) {
   measurements.smallFiles = measure("medianFileBytes", medianFileBytes)
   measurements.noMegaFiles = measure("largestFileBytes", largestFileBytes)
 
-  const counts = new Map<Casing, number>()
-  for (const file of facts.codeFiles) {
-    const casing = casingOf(file.path)
-    counts.set(casing, (counts.get(casing) ?? 0) + 1)
-  }
-  const dominant = Math.max(0, ...counts.values())
-  const namingShare = facts.codeFiles.length > 0 ? dominant / facts.codeFiles.length : 0
-  measurements.consistentNaming = measure("namingConsistency", namingShare)
+  const namingShare = namingConsistency(facts.codeFiles.map((f) => f.path))
+  measurements.consistentNaming = measure("namingConsistency", namingShare ?? 0)
 
   const hasFiles = facts.codeFiles.length > 0
 
@@ -51,8 +70,11 @@ export function detectMetrics(facts: RawFacts) {
     measurements,
     has: {
       smallFiles: hasFiles ? passes("medianFileBytes", medianFileBytes) : null,
-      noMegaFiles: hasFiles ? passes("largestFileBytes", largestFileBytes) : null,
-      consistentNaming: hasFiles ? passes("namingConsistency", namingShare) : null,
+      noMegaFiles: hasFiles
+        ? passes("largestFileBytes", largestFileBytes)
+        : null,
+      consistentNaming:
+        namingShare === null ? null : passes("namingConsistency", namingShare),
     },
   }
 }

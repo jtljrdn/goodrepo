@@ -6,11 +6,42 @@ import { detectMetrics } from "./detect/metrics"
 import { detectStructure } from "./detect/structure"
 import { detectTests } from "./detect/tests"
 import { detectTooling } from "./detect/tooling"
-import type { Measurement, RawFacts, RepoMeta, RepoProfile, SignalId, TreeEntry } from "./types"
+import { readDependencies, readPackageJson } from "./detect/manifest"
+import { measure } from "./thresholds"
+import type {
+  Measurement,
+  RawFacts,
+  RepoMeta,
+  RepoProfile,
+  SignalId,
+  TreeEntry,
+} from "./types"
 
 export * from "./types"
-export { CAPS, passes, THRESHOLDS } from "./thresholds"
-export { isCodeFile, isKeptFile, isTestFile } from "./skip"
+export { CAPS, measure, passes, THRESHOLDS } from "./thresholds"
+export { isCodeFile, isDocFile, isKeptFile, isTestFile } from "./skip"
+export { CheckoutError, parseLsTree, withCheckout } from "./sandbox"
+export { buildDocPrompt, docPaths, extractClaims } from "./deep/claims"
+export type { Claim, ClaimSet } from "./deep/claims"
+export { deepReview, shouldLand } from "./deep/review"
+export {
+  AGENT_SIGNALS,
+  repoBrief,
+  resolveSignals,
+  unresolvedSignals,
+} from "./deep/signals"
+export { applyVerdicts, deepScan } from "./deep/scan"
+export type { DeepScan } from "./deep/scan"
+export type { SignalResolution, SignalVerdict } from "./deep/signals"
+export type { DeepFinding, DeepReview } from "./deep/review"
+export {
+  checkFinding,
+  directoriesOf,
+  normalize,
+  verifyFindings,
+} from "./deep/verify"
+export type { RejectedFinding, Verification } from "./deep/verify"
+export type { Checkout, CheckoutTarget } from "./sandbox"
 export { chooseConfigFiles, chooseSample } from "./collect"
 export {
   classifyRepo,
@@ -33,20 +64,7 @@ const FRAMEWORK_MARKERS: [string, RegExp][] = [
 ]
 
 function detectFramework(facts: RawFacts): string {
-  const text = facts.keptText.get("package.json") ?? ""
-  let deps: string[] = []
-  try {
-    const parsed: unknown = JSON.parse(text)
-    if (typeof parsed === "object" && parsed !== null) {
-      const pkg = parsed as Record<string, unknown>
-      for (const key of ["dependencies", "devDependencies"]) {
-        const group = pkg[key]
-        if (typeof group === "object" && group !== null) deps.push(...Object.keys(group))
-      }
-    }
-  } catch {
-    deps = []
-  }
+  const deps = readDependencies(readPackageJson(facts))
   for (const [name, marker] of FRAMEWORK_MARKERS) {
     if (deps.some((dep) => marker.test(dep))) return name
   }
@@ -63,12 +81,20 @@ export function analyze(
   const facts = collect(entries, texts, sampled, truncated)
 
   const manifest = detectManifest(facts)
-  const tooling = detectTooling(facts)
-  const docs = detectDocs(facts, manifest.packageManager)
   const tests = detectTests(facts)
-  const structure = detectStructure(facts)
-  const metrics = detectMetrics(facts)
   const imports = detectImports(facts)
+  const tooling = detectTooling(facts, manifest.library)
+  const structure = detectStructure(facts, manifest.workspaceRoots)
+  const metrics = detectMetrics(facts)
+  const docs = detectDocs(facts, {
+    packageManager: manifest.packageManager,
+    tests: tests.testFiles > 0,
+    testScript: tests.has.testScript,
+    buildScript: manifest.has.buildScript,
+    devScript: "dev" in manifest.scripts,
+    database: imports.usesDatabase,
+    api: imports.apiRoutes >= 2,
+  })
 
   const has: Record<SignalId, boolean | null> = {
     ...manifest.has,
@@ -86,13 +112,13 @@ export function analyze(
     ...structure.measurements,
     ...metrics.measurements,
     ...imports.measurements,
-    readmeDepth: { value: docs.readmeWords, threshold: 300, unit: "words" },
+    readmeDepth: measure("readmeWords", docs.readmeWords),
   }
 
   return {
     ...meta,
     framework: detectFramework(facts),
-    language: "TypeScript",
+    language: manifest.language,
     files: facts.paths.length,
     directories: structure.directories,
     maxDirectoryDepth: structure.maxDirectoryDepth,
