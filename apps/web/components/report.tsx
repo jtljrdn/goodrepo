@@ -24,7 +24,7 @@ const BAND_BG = {
 const BAND_LABEL = {
   good: "Agent ready",
   fair: "Needs work",
-  poor: "High friction",
+  poor: "Hard for agents",
 } as const
 
 const IMPACT_STYLE = {
@@ -57,10 +57,21 @@ function percent(value: number): string {
   return `${Number((value * 100).toFixed(1))}%`
 }
 
-function formatMeasurement({ value, threshold, unit }: Measurement): string {
-  if (unit === "share")
-    return `${percent(value)} · passes at ${percent(threshold)}`
-  return `${value.toLocaleString()} ${unit} · threshold ${threshold.toLocaleString()}`
+function formatMeasurement({
+  value,
+  threshold,
+  unit,
+  direction,
+}: Measurement): string {
+  const show = (n: number) =>
+    unit === "share" ? percent(n) : `${n.toLocaleString()} ${unit}`
+  const rule =
+    direction === "atLeast"
+      ? `needs ${show(threshold)} or more`
+      : direction === "atMost"
+        ? `limit ${show(threshold)}`
+        : `must stay under ${show(threshold)}`
+  return `${show(value)} · ${rule}`
 }
 
 const SIGNAL_MARK = { pass: "✓", fail: "⚠", "not-measured": "–" } as const
@@ -128,7 +139,7 @@ export function ReportHeadline({
     profile.language,
     `${profile.files.toLocaleString()} files`,
     formatBytes(profile.totalBytes),
-    profile.packageManager ?? "no package manager",
+    profile.packageManager ?? "no lockfile",
   ].filter((item): item is string => item !== null)
 
   return (
@@ -147,7 +158,7 @@ export function ReportHeadline({
             tone ? BAND_TEXT[tone] : "text-muted-foreground"
           )}
         >
-          {tone ? BAND_LABEL[tone] : "No categories could be scored"}
+          {tone ? BAND_LABEL[tone] : "Nothing could be scored"}
         </p>
         <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {meta.map((item) => (
@@ -257,7 +268,7 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
                   ? `+${signal.points}`
                   : signal.status === "fail"
                     ? `0 / ${signal.points}`
-                    : "not scored"}
+                    : "skipped"}
               </span>
             </li>
           ))}
@@ -324,38 +335,6 @@ export function RecommendationItem({
   )
 }
 
-export function ProfileBlock({ profile }: { profile: RepoProfile }) {
-  const compact = {
-    framework: profile.framework,
-    files: profile.files,
-    maxDirectoryDepth: profile.maxDirectoryDepth,
-    medianFileBytes: profile.medianFileBytes,
-    packageManager: profile.packageManager,
-    scripts: profile.scripts,
-    testFramework: profile.testFramework,
-    testFiles: profile.testFiles,
-    apiRoutes: profile.apiRoutes,
-    validationPatterns: profile.validationPatterns,
-    docs: profile.docs,
-  }
-
-  return (
-    <details className="group border-t border-border/60">
-      <summary className="flex cursor-pointer list-none items-center gap-4 py-3 transition-colors hover:bg-muted/50">
-        <span className="w-4 text-xs text-muted-foreground group-open:rotate-90">
-          ›
-        </span>
-        <span className="flex-1 font-sans text-xs text-muted-foreground">
-          The compact structure a deep scan would send to the model
-        </span>
-      </summary>
-      <pre className="mb-2 overflow-x-auto border border-border/60 bg-muted/40 p-4 text-[11px] leading-relaxed">
-        {JSON.stringify(compact, null, 2)}
-      </pre>
-    </details>
-  )
-}
-
 const REACH_LABEL = {
   most: "most of the relevant code",
   some: "some of the relevant code",
@@ -401,8 +380,10 @@ export function DeepVerdicts({
                 </h3>
                 <span className="text-[10px] text-muted-foreground/60">
                   {verdict.applicable
-                    ? `${verdict.patterns.length} pattern${verdict.patterns.length === 1 ? "" : "s"} observed`
-                    : "nothing of this kind in this repository"}
+                    ? verdict.patterns.length === 1
+                      ? "done one way"
+                      : `done ${verdict.patterns.length} different ways`
+                    : "nothing like this in the repository"}
                 </span>
               </div>
               <p className="mt-2 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">

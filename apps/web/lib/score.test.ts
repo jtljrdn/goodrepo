@@ -130,7 +130,7 @@ test("a deep-scan-only signal says so until a deep scan answers it", () => {
     .categories.flatMap((c) => c.signals)
     .find((s) => s.id === "consistentRouteShape")
   expect(answered?.status).toBe("not-measured")
-  expect(answered?.text).toContain("nothing of this kind")
+  expect(answered?.text).toContain("nothing like this")
 })
 
 test("every signal the agent can answer is marked as needing a deep scan", () => {

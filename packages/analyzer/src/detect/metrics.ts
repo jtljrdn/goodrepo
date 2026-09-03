@@ -1,15 +1,7 @@
-import { passes, THRESHOLDS } from "../thresholds"
+import { measure, passes } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
 type Casing = "kebab" | "camel" | "pascal" | "snake"
-
-function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return {
-    value,
-    threshold: THRESHOLDS[key].threshold,
-    unit: THRESHOLDS[key].unit,
-  }
-}
 
 function median(values: number[]): number {
   if (values.length === 0) return 0

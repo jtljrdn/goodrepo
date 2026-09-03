@@ -1,3 +1,5 @@
+import type { Measurement } from "./types"
+
 export const THRESHOLDS = {
   readmeWords: { threshold: 300, unit: "words", direction: "atLeast" },
   maxDepth: { threshold: 7, unit: "levels", direction: "atMost" },
@@ -13,6 +15,11 @@ export const THRESHOLDS = {
 } as const
 
 export type ThresholdKey = keyof typeof THRESHOLDS
+
+export function measure(key: ThresholdKey, value: number): Measurement {
+  const { threshold, unit, direction } = THRESHOLDS[key]
+  return { value, threshold, unit, direction }
+}
 
 export const CAPS = {
   importSample: 200,

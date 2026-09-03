@@ -7,7 +7,7 @@ import { detectStructure } from "./detect/structure"
 import { detectTests } from "./detect/tests"
 import { detectTooling } from "./detect/tooling"
 import { readDependencies, readPackageJson } from "./detect/manifest"
-import { THRESHOLDS } from "./thresholds"
+import { measure } from "./thresholds"
 import type {
   Measurement,
   RawFacts,
@@ -18,7 +18,7 @@ import type {
 } from "./types"
 
 export * from "./types"
-export { CAPS, passes, THRESHOLDS } from "./thresholds"
+export { CAPS, measure, passes, THRESHOLDS } from "./thresholds"
 export { isCodeFile, isDocFile, isKeptFile, isTestFile } from "./skip"
 export { CheckoutError, parseLsTree, withCheckout } from "./sandbox"
 export { buildDocPrompt, docPaths, extractClaims } from "./deep/claims"
@@ -112,11 +112,7 @@ export function analyze(
     ...structure.measurements,
     ...metrics.measurements,
     ...imports.measurements,
-    readmeDepth: {
-      value: docs.readmeWords,
-      threshold: THRESHOLDS.readmeWords.threshold,
-      unit: THRESHOLDS.readmeWords.unit,
-    },
+    readmeDepth: measure("readmeWords", docs.readmeWords),
   }
 
   return {

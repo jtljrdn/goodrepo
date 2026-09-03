@@ -59,7 +59,7 @@ export function ScanForm({ className }: { className?: string }) {
           error ? "text-destructive" : "text-muted-foreground"
         )}
       >
-        {error ?? "Public repos only. No sign in, no model call, no waiting."}
+        {error ?? "Public repos only. No sign in, no AI, no waiting."}
       </p>
     </form>
   )

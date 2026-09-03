@@ -92,9 +92,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "generatedExcluded",
         15,
-        "Generated output excluded",
-        "Generated output is ignored and excluded",
-        "Generated output is committed alongside source"
+        "Build output kept out of the repo",
+        "Build output is not committed",
+        "Build output is committed next to the source"
       ),
     ],
   },
@@ -199,7 +199,7 @@ export const CATEGORIES: CategoryDef[] = [
         15,
         "typecheck script",
         "typecheck script defined",
-        "No typecheck script — agents cannot check types in one command"
+        "No typecheck script, so an agent cannot check types in one command"
       ),
       s(
         "singleTestDocumented",
@@ -269,9 +269,9 @@ export const CATEGORIES: CategoryDef[] = [
       s(
         "lintConfig",
         15,
-        "Lint config enforcing conventions",
-        "Lint config enforces the conventions",
-        "No lint config enforcing conventions"
+        "Lint config",
+        "A linter enforces the code conventions",
+        "No linter config, so conventions are not enforced"
       ),
     ],
   },
@@ -284,8 +284,9 @@ export const CATEGORIES: CategoryDef[] = [
         "lockfile",
         15,
         "Lockfile and pinned package manager",
-        (p) => `Lockfile and pinned package manager (${p.packageManager})`,
-        "No lockfile or pinned package manager"
+        (p) =>
+          `Lockfile present and package manager pinned (${p.packageManager})`,
+        "No lockfile, or the package manager version is not pinned"
       ),
       s(
         "buildScript",
@@ -312,8 +313,8 @@ export const CATEGORIES: CategoryDef[] = [
         "envExample",
         15,
         "Environment variable template",
-        ".env.example lists required variables",
-        "No .env.example — required env vars are unknown"
+        ".env.example lists the required settings",
+        "No .env.example, so the required settings are unknown"
       ),
       s(
         "container",
@@ -347,30 +348,31 @@ export const CATEGORIES: CategoryDef[] = [
         "smallFiles",
         20,
         "Median file size",
-        (p) => `Median file is ${formatBytes(p.medianFileBytes)}`,
+        (p) => `A typical file is ${formatBytes(p.medianFileBytes)}`,
         (p) =>
-          `Median file is ${formatBytes(p.medianFileBytes)}, so most edits pull in a lot of context`
+          `A typical file is ${formatBytes(p.medianFileBytes)}, so most edits mean reading a lot`
       ),
       s(
         "noMegaFiles",
         15,
         "Largest file size",
         (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`,
-        (p) => `Largest file is ${formatBytes(p.largestFileBytes)}`
+        (p) =>
+          `Largest file is ${formatBytes(p.largestFileBytes)}, too big to read in one go`
       ),
       s(
         "featureFolders",
         25,
         "Folders named by feature",
         "Source folders are named after features, not file types",
-        "Source folders are named after file types (components, hooks, utils), so one change is spread across them"
+        "Source folders are named after file types (components, hooks, utils), so one change touches several of them"
       ),
       s(
         "lowFanout",
         20,
         "Change fan-out across modules",
         "A typical file reaches into few other folders",
-        "A typical file reaches into many other folders, so one change pulls in a lot of context"
+        "A typical file reaches into many other folders, so one change means reading many of them"
       ),
     ],
   },
@@ -421,10 +423,10 @@ export function scoreCategory(
     const value = p.has[sig.id]
     if (value === null || value === undefined) {
       const reason = answered.has(sig.id)
-        ? "nothing of this kind in this repository"
+        ? "nothing like this in the repository"
         : DEEP_SCAN_ONLY.has(sig.id)
           ? "needs a deep scan"
-          : "does not apply to this repository"
+          : "does not apply here"
       return {
         id: sig.id,
         points: sig.points,

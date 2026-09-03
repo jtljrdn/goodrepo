@@ -1,5 +1,5 @@
 import { GENERATED_DIRS, isTestFile } from "../skip"
-import { passes, THRESHOLDS } from "../thresholds"
+import { measure, passes } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
 const TYPE_NAMES = new Set([
@@ -42,14 +42,6 @@ const PREDICTABLE_ROOTS = new Set([
 ])
 
 const SOURCE_ROOTS = ["src", "app", "lib", "apps", "packages"]
-
-function measure(key: keyof typeof THRESHOLDS, value: number): Measurement {
-  return {
-    value,
-    threshold: THRESHOLDS[key].threshold,
-    unit: THRESHOLDS[key].unit,
-  }
-}
 
 function topLevel(path: string): string {
   const slash = path.indexOf("/")

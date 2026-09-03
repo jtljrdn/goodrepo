@@ -53,7 +53,7 @@ async function reason(
   }
 }
 
-const deepAtSha = cachedByCommit("deep", "v2", reason)
+const deepAtSha = cachedByCommit("deep", "v3", reason)
 
 export async function runDeepScan(
   owner: string,

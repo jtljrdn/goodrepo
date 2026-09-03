@@ -140,7 +140,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       bullets: [],
     },
     lowFanout: {
-      title: "Reduce the blast radius of common changes",
+      title: "Keep one change inside one folder",
       impact: "Medium",
       source: "deep",
       evidence: (p) =>
@@ -176,7 +176,7 @@ const COPY: Partial<Record<SignalId, Omit<Recommendation, "id" | "category">>> =
       source: "static",
       evidence: () =>
         "No CI workflow was found, so nothing independently verifies an agent's change.",
-      fix: "Add a workflow that runs install, lint, typecheck and test on every pull request.",
+      fix: "Add a GitHub Actions workflow that runs install, lint, typecheck and test on every pull request.",
       bullets: [],
     },
     colocatedTests: {

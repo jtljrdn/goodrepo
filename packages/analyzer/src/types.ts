@@ -40,7 +40,12 @@ export type SignalId =
   | "featureFolders"
   | "lowFanout"
 
-export type Measurement = { value: number; threshold: number; unit: string }
+export type Measurement = {
+  value: number
+  threshold: number
+  unit: string
+  direction: "atLeast" | "atMost" | "lessThan"
+}
 
 export type TreeEntry = {
   path: string
