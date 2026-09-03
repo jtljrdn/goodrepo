@@ -22,23 +22,26 @@ export async function Footer() {
 
   return (
     <footer className="border-t border-border/60">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-6 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
+      <div className="mx-auto flex max-w-5xl flex-col gap-3 px-6 py-6 text-xs text-muted-foreground sm:grid sm:grid-cols-3 sm:items-center">
         <span>© {new Date().getFullYear()} GoodRepo</span>
-        <nav className="flex flex-wrap items-center gap-4 sm:ml-auto">
+        <span className="sm:text-center">
+          Made with <span aria-label="love">♥</span> by{" "}
+          <a
+            href="https://jtlee.dev"
+            target="_blank"
+            rel="noreferrer"
+            className="text-foreground hover:underline underline-offset-4"
+          >
+            Jordan Lee
+          </a>
+        </span>
+        <nav className="flex flex-wrap items-center gap-4 sm:justify-end">
           <Link href="/privacy" className="hover:text-foreground">
             Privacy
           </Link>
           <Link href="/terms" className="hover:text-foreground">
             Terms
           </Link>
-          <a
-            href="https://www.npmjs.com/package/goodrepo"
-            target="_blank"
-            rel="noreferrer"
-            className="hover:text-foreground"
-          >
-            npm
-          </a>
           <a
             href={`https://github.com/${REPO}`}
             target="_blank"
