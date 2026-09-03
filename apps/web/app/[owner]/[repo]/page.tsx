@@ -12,7 +12,7 @@ const OG_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt }
 export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
   const title = `${owner}/${repo}`
-  const description = `GoodRepo scores ${owner}/${repo} for AI agent readiness from measurable repository signals.`
+  const description = `GoodRepo scores ${owner}/${repo} on how easy it is for AI agents to work in.`
   return {
     title,
     description,

@@ -1,6 +1,6 @@
 import { pool } from "@/lib/db"
 
-export const DAILY_RUNS_PER_ACCOUNT: number = 5
+export const DAILY_RUNS_PER_ACCOUNT: number = 3
 
 const DEFAULT_MONTHLY_RUNS = 700
 

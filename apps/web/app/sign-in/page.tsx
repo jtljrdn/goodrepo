@@ -50,7 +50,7 @@ export default async function SignInPage(props: PageProps<"/sign-in">) {
               <AuthForm next={destination} />
             ) : (
               <p className="border border-border/60 p-4 text-xs leading-relaxed text-muted-foreground">
-                Sign-in is not set up on this deployment. Fast scans work
+                Sign-in is not set up on this deployment. Quick scans work
                 without an account.
               </p>
             )}

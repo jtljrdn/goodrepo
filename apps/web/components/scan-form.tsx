@@ -11,12 +11,15 @@ const DEFAULT_HINT = "Public repos need no sign in. No AI, no waiting."
 export function ScanForm({
   className,
   hint = DEFAULT_HINT,
+  deepOption = false,
 }: {
   className?: string
   hint?: string | null
+  deepOption?: boolean
 }) {
   const router = useRouter()
   const [value, setValue] = React.useState("")
+  const [deep, setDeep] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [pending, startTransition] = React.useTransition()
 
@@ -29,7 +32,7 @@ export function ScanForm({
     }
     setError(null)
     startTransition(() => {
-      router.push(`/${parsed.owner}/${parsed.repo}`)
+      router.push(`/${parsed.owner}/${parsed.repo}${deep ? "/deep" : ""}`)
     })
   }
 
@@ -60,9 +63,21 @@ export function ScanForm({
           className="h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-muted-foreground/60"
         />
         <Button type="submit" size="lg" disabled={pending} className="m-1 px-4">
-          {pending ? "Scanning" : "Scan"}
+          {pending ? "Scanning" : deep ? "Deep scan" : "Scan"}
         </Button>
       </div>
+      {deepOption ? (
+        <label className="mt-3 flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={deep}
+            onChange={(event) => setDeep(event.target.checked)}
+            className="size-3.5 accent-foreground"
+          />
+          Deep scan: an AI reads the code. Slower, and it uses one of your runs
+          for today.
+        </label>
+      ) : null}
       {message ? (
         <p
           className={cn(

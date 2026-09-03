@@ -54,8 +54,8 @@ export default async function PrivateReportPage(
           title="Reconnect GitHub to scan this"
           detail={
             GITHUB_SIGN_IN_ENABLED
-              ? "GoodRepo reads a private repository as you, not as itself, and this account's GitHub connection is no longer usable. Signing in again restores it."
-              : "GitHub is not configured on this deployment, so private repositories cannot be scanned here."
+              ? "GoodRepo reads private repositories using your GitHub access, and that access has expired. Sign in again to restore it."
+              : "Sign-in is not set up on this deployment, so private repositories cannot be scanned here."
           }
         >
           {GITHUB_SIGN_IN_ENABLED ? <ReconnectGitHub next={here} /> : null}

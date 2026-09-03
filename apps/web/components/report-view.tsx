@@ -203,7 +203,7 @@ export function ReportView({
             <h3 className="text-sm font-medium">Deep scan</h3>
             <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
               {!deepAvailable
-                ? "Deep scans read the code in a sandbox that clones as GoodRepo itself, so they cannot open a private repository. This report is the quick scan."
+                ? "Deep scans use GoodRepo's own GitHub access, which cannot see private repositories. This report is the quick scan."
                 : ran
                   ? "An AI read the code at this commit and answered the checks the quick scan could not. Opening this report again is free."
                   : `An AI reads the code to settle the ${pending > 0 ? pending : "few"} checks a quick scan cannot. Takes about a minute and is free with a GitHub sign-in.`}

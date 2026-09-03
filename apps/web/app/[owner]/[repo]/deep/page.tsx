@@ -16,11 +16,11 @@ export const maxDuration = 300
 const REFUSALS: Record<QuotaRefusal, { title: string; detail: string }> = {
   daily: {
     title: "Out of deep scans for today",
-    detail: `An account can start ${DAILY_RUNS_PER_ACCOUNT} deep scan${DAILY_RUNS_PER_ACCOUNT === 1 ? "" : "s"} a day. The count is a rolling 24 hours, so the oldest one frees up as it ages out. Reports you have already run stay readable and cost nothing to open again.`,
+    detail: `Each account gets ${DAILY_RUNS_PER_ACCOUNT} deep scan${DAILY_RUNS_PER_ACCOUNT === 1 ? "" : "s"} a day, counted over the last 24 hours, so the oldest one frees up as it ages out. Reports you already ran stay open and free.`,
   },
   monthly: {
     title: "Deep scans are paused for this month",
-    detail: `GoodRepo caps itself at ${MONTHLY_RUNS_TOTAL} deep scans a month so a quiet bill cannot become a loud one. That ceiling is reached, so deep scans resume when the month rolls over. Fast scans are unaffected.`,
+    detail: `GoodRepo allows ${MONTHLY_RUNS_TOTAL} deep scans a month across everyone, to keep costs in check. That limit is reached, so deep scans come back next month. Quick scans still work.`,
   },
 }
 

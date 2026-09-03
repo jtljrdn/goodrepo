@@ -33,19 +33,19 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Not scanned",
         detail:
-          "GoodRepo currently analyzes JavaScript and TypeScript repositories. This one has no package.json at its root. Support for other ecosystems is on the roadmap.",
+          "GoodRepo only scans JavaScript and TypeScript projects for now. This one has no package.json in its top folder. Other languages are coming.",
       }
     case "not-found":
       return {
         title: "Not reachable",
         detail:
-          "That repository or commit does not exist, or GoodRepo cannot see it. Private repositories need a signed-in GitHub account with the GoodRepo app installed on them.",
+          "That repository or commit does not exist, or GoodRepo cannot see it. To scan a private repository, sign in with GitHub and give the GoodRepo app access to it.",
       }
     case "rate-limited":
       return {
         title: "Try again shortly",
         detail:
-          "GitHub is rate limiting requests right now. Wait a minute and scan again.",
+          "GitHub is asking us to slow down. Wait a minute and scan again.",
       }
     case "empty":
       return {
@@ -56,7 +56,7 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Too large to scan",
         detail:
-          "This repository has more files than GitHub will list in one request, so GoodRepo cannot see all of it.",
+          "This repository has too many files for GitHub to list at once, so GoodRepo cannot see all of it.",
       }
   }
 }

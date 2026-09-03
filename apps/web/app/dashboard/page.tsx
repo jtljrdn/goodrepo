@@ -104,13 +104,6 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
   )
 }
 
-async function Greeting() {
-  const session = await currentSession()
-  if (!session) return "Your scans"
-  const { name, email } = session.user
-  return `Welcome back, ${name || email.split("@")[0] || email}`
-}
-
 async function History() {
   if (!GITHUB_SIGN_IN_ENABLED) redirect("/home")
 
@@ -186,12 +179,12 @@ async function History() {
             {repos.map((entry) => (
               <li
                 key={`${entry.owner}/${entry.repo}`}
-                className="border-b border-border/60"
+                className="flex items-center border-b border-border/60"
               >
                 <Link
                   href={`/${entry.owner}/${entry.repo}${REPORT_PATH[entry.kind]}?sha=${entry.commitSha}`}
                   prefetch={false}
-                  className="flex items-center gap-4 px-1 py-4 transition-colors hover:bg-muted/40"
+                  className="flex min-w-0 flex-1 items-center gap-4 px-1 py-4 transition-colors hover:bg-muted/40"
                 >
                   <span
                     className={`w-10 shrink-0 text-right text-lg leading-none font-medium tabular-nums ${
@@ -212,6 +205,16 @@ async function History() {
                     </span>
                   </span>
                 </Link>
+                {DEEP_SCAN_ENABLED && entry.kind === "fast" ? (
+                  <Link
+                    href={`/${entry.owner}/${entry.repo}/deep?sha=${entry.commitSha}`}
+                    prefetch={false}
+                    rel="nofollow"
+                    className="ml-4 shrink-0 border border-border/60 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                  >
+                    Deep scan
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -236,16 +239,14 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-5xl px-6 pb-24 sm:border-x sm:border-border/60">
         <section className="py-12">
           <h1 className="text-2xl leading-tight font-medium tracking-tight">
-            <Suspense fallback="Your scans">
-              <Greeting />
-            </Suspense>
+            Your scans
           </h1>
           <p className="mt-3 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
             Every report you open is kept here, so you can come back to a
             repository without pasting its link again.
           </p>
           <div className="mt-8 max-w-2xl">
-            <ScanForm hint={null} />
+            <ScanForm hint={null} deepOption={DEEP_SCAN_ENABLED} />
           </div>
         </section>
 
