@@ -74,12 +74,15 @@ export function ReportView({
   overall,
   categories,
   deep = null,
+  sha = null,
 }: {
   profile: RepoProfile
   overall: number | null
   categories: ScoredCategory[]
   deep?: DeepDetail | null
+  sha?: string | null
 }) {
+  const query = sha ? `?sha=${sha}` : ""
   const recommendations = recommend(profile, categories)
   const ran = deep !== null && deep.unfinished === null ? deep : null
   const signals = categories.flatMap((category) => category.signals)
@@ -191,14 +194,14 @@ export function ReportView({
                 Not available yet
               </Button>
             ) : ran ? (
-              <Link href={`/${profile.owner}/${profile.repo}`}>
+              <Link href={`/${profile.owner}/${profile.repo}${query}`}>
                 <Button variant="outline" size="sm" className="mt-4">
                   Back to the quick scan
                 </Button>
               </Link>
             ) : (
               <Link
-                href={`/${profile.owner}/${profile.repo}/deep`}
+                href={`/${profile.owner}/${profile.repo}/deep${query}`}
                 prefetch={false}
                 rel="nofollow"
               >

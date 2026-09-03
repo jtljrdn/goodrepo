@@ -1,6 +1,6 @@
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { alt } from "@/app/opengraph-image"
-import { failureMessage, runScan } from "@/lib/scan"
+import { failureMessage, readSha, runScan } from "@/lib/scan"
 
 export const maxDuration = 300
 
@@ -30,7 +30,8 @@ export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
 
 export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
-  const result = await runScan(owner, repo)
+  const ref = readSha((await props.searchParams).sha)
+  const result = await runScan(owner, repo, ref)
 
   if (!result.ok) {
     const { title, detail } = failureMessage(result.failure)
@@ -51,6 +52,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
         profile={result.profile}
         overall={result.overall}
         categories={result.categories}
+        sha={ref}
       />
     </ReportShell>
   )

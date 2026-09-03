@@ -58,9 +58,10 @@ const deepAtSha = cachedByCommit("deep", "v3", reason)
 export async function runDeepScan(
   owner: string,
   repo: string,
-  userId: string
+  userId: string,
+  ref: string | null = null
 ): Promise<DeepReport> {
-  const sha = await resolveSha(owner, repo)
+  const sha = await resolveSha(owner, repo, ref)
   if (isFailure(sha)) return { ok: false, refused: null, failure: sha }
 
   const claim = await claimDeepScan(userId, owner, repo, sha)

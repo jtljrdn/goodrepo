@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
 import { CopyButton } from "@/components/copy-button"
 import { CATEGORIES, type CategoryKey } from "@/lib/score"
-import { EXAMPLES } from "@/lib/examples"
+import { EXAMPLES, exampleHref } from "@/lib/examples"
 
 const INSTALL_COMMAND = "npx skills add jtljrdn/goodrepo"
 
@@ -58,7 +58,7 @@ export default function Page() {
             {EXAMPLES.map((example) => (
               <Link
                 key={example.slug}
-                href={`/${example.slug}`}
+                href={exampleHref(example)}
                 className="border border-border/60 px-2 py-1 text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               >
                 {example.slug}

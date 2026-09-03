@@ -8,7 +8,7 @@ import {
   MONTHLY_RUNS_TOTAL,
   type QuotaRefusal,
 } from "@/lib/quota"
-import { failureMessage } from "@/lib/scan"
+import { failureMessage, readSha } from "@/lib/scan"
 
 export const maxDuration = 300
 
@@ -39,13 +39,17 @@ export default async function DeepReportPage(
   if (!DEEP_SCAN_ENABLED) notFound()
 
   const { owner, repo } = await props.params
+  const ref = readSha((await props.searchParams).sha)
+  const query = ref ? `?sha=${ref}` : ""
 
   const session = await currentSession()
   if (!session) {
-    redirect(`/sign-in?next=${encodeURIComponent(`/${owner}/${repo}/deep`)}`)
+    redirect(
+      `/sign-in?next=${encodeURIComponent(`/${owner}/${repo}/deep${query}`)}`
+    )
   }
 
-  const result = await runDeepScan(owner, repo, session.user.id)
+  const result = await runDeepScan(owner, repo, session.user.id, ref)
 
   if (!result.ok) {
     const { title, detail } = result.refused
@@ -69,6 +73,7 @@ export default async function DeepReportPage(
         overall={result.overall}
         categories={result.categories}
         deep={{ verdicts: result.verdicts, unfinished: result.unfinished }}
+        sha={ref}
       />
     </ReportShell>
   )

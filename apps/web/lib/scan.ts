@@ -13,7 +13,6 @@ import {
   type ScanFailure,
 } from "@workspace/analyzer"
 import { cachedByCommit, isTransient, TRANSIENT } from "@/lib/cache"
-import { pinnedSha } from "@/lib/examples"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
 
 export type ScanResult =
@@ -40,7 +39,7 @@ export function failureMessage(failure: ScanFailure): {
       return {
         title: "Not reachable",
         detail:
-          "That repository is private or does not exist. GoodRepo only scans public repositories.",
+          "That repository or commit is private or does not exist. GoodRepo only scans public repositories.",
       }
     case "rate-limited":
       return {
@@ -133,23 +132,35 @@ export async function scanAtSha(
   }
 }
 
-const COMMIT_SHA = /^[0-9a-f]{40}$/
+const FULL_SHA = /^[0-9a-f]{40}$/
+const SHA_PREFIX = /^[0-9a-f]{7,40}$/i
+
+// The ref is interpolated into a GitHub URL, so only a hex commit prefix gets through.
+export function readSha(value: string | string[] | undefined): string | null {
+  if (value === undefined) return null
+  return typeof value === "string" && SHA_PREFIX.test(value)
+    ? value.toLowerCase()
+    : "invalid"
+}
 
 export async function resolveSha(
   owner: string,
-  repo: string
+  repo: string,
+  ref: string | null
 ): Promise<string | ScanFailure> {
-  const pinned = pinnedSha(owner, repo)
-  if (pinned !== null && COMMIT_SHA.test(pinned)) return pinned
+  if (ref === "invalid")
+    return { kind: "not-found", message: "That is not a commit sha." }
+  if (ref !== null && FULL_SHA.test(ref)) return ref
 
-  return fetchHeadSha(owner, repo, pinned ?? "HEAD", process.env.GITHUB_TOKEN)
+  return fetchHeadSha(owner, repo, ref ?? "HEAD", process.env.GITHUB_TOKEN)
 }
 
 export async function runScan(
   owner: string,
-  repo: string
+  repo: string,
+  ref: string | null = null
 ): Promise<ScanResult> {
-  const sha = await resolveSha(owner, repo)
+  const sha = await resolveSha(owner, repo, ref)
   if (isFailure(sha)) return { ok: false, failure: sha }
 
   return scanAtSha(owner, repo, sha)
