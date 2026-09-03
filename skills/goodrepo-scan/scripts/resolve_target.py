@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 
-DEFAULT_SITE_URL = "https://goodrepo-web.vercel.app"
+DEFAULT_SITE_URL = "https://goodrepo.dev"
 
 
 class ResolutionError(RuntimeError):
