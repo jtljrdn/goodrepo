@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { ReconnectGitHub } from "@/components/reconnect-github"
+import { LogScan } from "@/components/log-scan"
 import {
   currentSession,
   githubToken,
@@ -84,6 +85,13 @@ export default async function PrivateReportPage(
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
+      <LogScan
+        owner={result.profile.owner}
+        repo={result.profile.repo}
+        commitSha={result.profile.commitSha}
+        kind="private"
+        score={result.overall}
+      />
       <ReportView
         profile={result.profile}
         overall={result.overall}

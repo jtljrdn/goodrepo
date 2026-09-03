@@ -6,7 +6,17 @@ import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { parseRepoInput } from "@/lib/parse-repo"
 
-export function ScanForm({ className }: { className?: string }) {
+const DEFAULT_HINT = "Public repos need no sign in. No AI, no waiting."
+
+export function ScanForm({
+  className,
+  hint = DEFAULT_HINT,
+}: {
+  className?: string
+  // Null on the dashboard: the reader is already signed in, so the line has nothing to tell
+  // them. The error still shows.
+  hint?: string | null
+}) {
   const router = useRouter()
   const [value, setValue] = React.useState("")
   const [error, setError] = React.useState<string | null>(null)
@@ -24,6 +34,8 @@ export function ScanForm({ className }: { className?: string }) {
       router.push(`/${parsed.owner}/${parsed.repo}`)
     })
   }
+
+  const message = error ?? hint
 
   return (
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
@@ -53,14 +65,16 @@ export function ScanForm({ className }: { className?: string }) {
           {pending ? "Scanning" : "Scan"}
         </Button>
       </div>
-      <p
-        className={cn(
-          "mt-2 text-xs",
-          error ? "text-destructive" : "text-muted-foreground"
-        )}
-      >
-        {error ?? "Public repos need no sign in. No AI, no waiting."}
-      </p>
+      {message ? (
+        <p
+          className={cn(
+            "mt-2 text-xs",
+            error ? "text-destructive" : "text-muted-foreground"
+          )}
+        >
+          {message}
+        </p>
+      ) : null}
     </form>
   )
 }

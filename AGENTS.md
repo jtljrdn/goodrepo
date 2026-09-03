@@ -10,7 +10,7 @@ Turborepo monorepo, Bun workspaces. Two workspace globs: `apps/*` and `packages/
 
 ### Entry points
 
-- `apps/web` — the Next.js App Router site. `app/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report, `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in, and `app/[owner]/[repo]/private/page.tsx` the report for a repository only the signed-in user can see. Scanning happens in server components, not API routes; the only route handler is
+- `apps/web` — the Next.js App Router site. `app/page.tsx` is the signed-in dashboard and `app/home/page.tsx` is the landing page and scan form; `app/[owner]/[repo]/page.tsx` renders the free static report, `app/[owner]/[repo]/deep/page.tsx` the same report with the deep scan folded in, and `app/[owner]/[repo]/private/page.tsx` the report for a repository only the signed-in user can see. Scanning happens in server components, not API routes; the only route handler is
 `app/api/auth/[...all]/route.ts`, which Better Auth owns. `app/sign-in/page.tsx` is the one
 account surface, and it is where the deep and private routes send anonymous visitors.
 
@@ -59,6 +59,24 @@ the same count and each decide they are under the cap. The unique constraint on
 `decideClaim` is the pure half and is unit tested; the SQL only feeds it counts. Deleting an
 account nulls its rows rather than removing them, so the month's spend cannot be reset by
 deleting a user.
+
+**`/` is the dashboard, `/home` is the landing page.** A signed-in visitor lands on their
+own scan history; everyone else is sent to `/home`, which is the page worth indexing and
+names itself canonical. That redirect lives in `proxy.ts`, not in the page, because `/` is
+partially prerendered and its shell is flushed before a `redirect()` inside the page can run
+— the same reason the disabled deep route answers `200` with the 404 page. The proxy reads
+only the session cookie, never the database, since it runs on prefetches too; a stale cookie
+falls through to the page, which does the real check.
+
+**Every report a signed-in account opens writes one row into `goodrepo.scan_run`**, which is
+what the dashboard reads. The write happens in `components/log-scan.tsx`, a component that
+renders nothing and exists only to sit inside its own Suspense boundary: reading the session
+at the top of `app/[owner]/[repo]/page.tsx` would make that route dynamic and cost every
+public report its prerendered shell. `recordScan` swallows its own errors on purpose — a
+history row is worth less than the report it belongs to. The row is keyed by `(user_id,
+owner, repo, commit_sha, kind)`, so reloading a report does not inflate the count, and
+deleting an account cascades its history away; unlike `deep_scan_run`, nothing here meters
+spend, so there is no reason to keep orphan rows.
 
 **App tables go in the `goodrepo` schema, not `public`.** `public` is what Supabase exposes
 through PostgREST, and this project's default privileges there grant `anon` and `authenticated`

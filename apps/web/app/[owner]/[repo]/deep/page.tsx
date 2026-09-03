@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
+import { LogScan } from "@/components/log-scan"
 import { currentSession } from "@/lib/auth"
 import { runDeepScan } from "@/lib/deep"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
@@ -68,6 +69,13 @@ export default async function DeepReportPage(
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
+      <LogScan
+        owner={result.profile.owner}
+        repo={result.profile.repo}
+        commitSha={result.profile.commitSha}
+        kind="deep"
+        score={result.overall}
+      />
       <ReportView
         profile={result.profile}
         overall={result.overall}

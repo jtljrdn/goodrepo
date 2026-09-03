@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
+import { LogScan } from "@/components/log-scan"
 import { alt } from "@/app/opengraph-image"
 import { failureMessage, readSha, runScan } from "@/lib/scan"
 
@@ -66,6 +67,13 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
+      <LogScan
+        owner={result.profile.owner}
+        repo={result.profile.repo}
+        commitSha={result.profile.commitSha}
+        kind="fast"
+        score={result.overall}
+      />
       <ReportView
         profile={result.profile}
         overall={result.overall}

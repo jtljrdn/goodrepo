@@ -103,3 +103,15 @@ export async function claimDeepScan(
     client.release()
   }
 }
+
+// Read-only counterpart to claimDeepScan, for showing an account what it has left. Takes no
+// lock: a display that is one run stale is fine, and only the claim may decide.
+export async function deepRunsToday(userId: string): Promise<number> {
+  const { rows } = await pool.query<{ runs: string }>(
+    `select count(*) as runs
+     from goodrepo.deep_scan_run
+     where user_id = $1 and created_at > now() - interval '1 day'`,
+    [userId]
+  )
+  return Number(rows[0]?.runs ?? 0)
+}
