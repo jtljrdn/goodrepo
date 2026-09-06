@@ -4,38 +4,12 @@ import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
 import { HeroBackdrop } from "@/components/hero-backdrop"
 import { CopyButton } from "@/components/copy-button"
-import { CATEGORIES, type CategoryKey } from "@/lib/score"
+import { CATEGORIES } from "@/lib/score"
 import { EXAMPLES, exampleHref } from "@/lib/examples"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 
 const INSTALL_COMMAND = "npx skills add jtljrdn/goodrepo"
-
-const SIGNAL_COUNT = CATEGORIES.reduce((n, c) => n + c.signals.length, 0)
-
-const CATEGORY_SAMPLES: Record<CategoryKey, string> = {
-  discoverability: "Source lives under a single predictable root",
-  instructions: "AGENTS.md exists",
-  testability: "typecheck script defined",
-  consistency: "One validation approach across routes",
-  tooling: ".env.example lists required variables",
-  context: "Common changes stay inside one module",
-}
-
-const TICKER: { points: string; text: string }[] = [
-  { points: "+15", text: "README.md at repository root" },
-  { points: "+20", text: "AGENTS.md exists" },
-  { points: "+20", text: "test script defined" },
-  { points: "+15", text: "typecheck script defined" },
-  { points: "+15", text: "Lockfile and pinned package manager" },
-  { points: "+20", text: "One validation approach across routes" },
-  { points: "+15", text: "Tests sit next to the code they cover" },
-  { points: "+15", text: ".env.example lists required variables" },
-  { points: "+20", text: "Common changes stay inside one module" },
-  { points: "+15", text: "Generated output is ignored and excluded" },
-  { points: "+10", text: "Running a single test is documented" },
-  { points: "+15", text: "Folders are named after domains, not types" },
-]
 
 async function SignInNudge() {
   if (!GITHUB_SIGN_IN_ENABLED || (await currentSession())) return null
@@ -48,9 +22,7 @@ async function SignInNudge() {
         Sign in with GitHub
       </Link>{" "}
       to scan private repositories
-      {DEEP_SCAN_ENABLED
-        ? " or run a deep scan, where an AI reads the code itself"
-        : ""}
+      {DEEP_SCAN_ENABLED ? " or run a deep scan" : ""}
       .
     </p>
   )
@@ -70,10 +42,8 @@ export default function Page() {
             How easy is your codebase for AI agents to work in?
           </h1>
           <p className="mt-5 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
-            Paste a GitHub link. GoodRepo checks how the code is organized, what
-            instructions it leaves for AI tools, and how easy it is to test,
-            then gives it a score out of 100. {SIGNAL_COUNT} checks, each with
-            the reason behind it.
+            Scan a GitHub repository for agent readiness using a combination of LLM and codebase analysis.
+            Get a score out of 100 and a list of fixes.
           </p>
           <div className="mt-8 max-w-2xl">
             <ScanForm />
@@ -97,7 +67,7 @@ export default function Page() {
           <div className="mt-12 max-w-2xl border border-border/60">
             <div className="flex items-baseline justify-between gap-3 border-b border-border/60 px-4 py-2.5">
               <h2 className="text-xs font-medium">
-                Scan from inside your coding agent
+                Use GoodRepo in your agent
               </h2>
             </div>
             <div className="flex items-center gap-3 bg-muted/30 px-4 py-3">
@@ -118,29 +88,6 @@ export default function Page() {
           </div>
         </section>
 
-        <section
-          aria-hidden
-          className="overflow-hidden border-t border-border/60 py-3 [&>div]:[mask-image:linear-gradient(to_right,transparent,black_8%,black_92%,transparent)]"
-        >
-          <div className="flex w-max animate-ticker gap-8 whitespace-nowrap motion-reduce:animate-none">
-            {[0, 1].map((half) => (
-              <div key={half} className="flex gap-8">
-                {TICKER.map((signal) => (
-                  <span
-                    key={signal.text}
-                    className="flex items-baseline gap-2 text-[11px] text-muted-foreground/70"
-                  >
-                    <span className="text-success tabular-nums">
-                      {signal.points}
-                    </span>
-                    {signal.text}
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="border-t border-border/60 px-6 py-12">
           <h2 className="text-sm font-medium">What gets scored</h2>
           <ul className="mt-6 grid gap-px sm:grid-cols-2 lg:grid-cols-3">
@@ -153,14 +100,7 @@ export default function Page() {
                 <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
                   {category.question}
                 </p>
-                <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-border/40 pt-3 text-[10px] text-muted-foreground/60">
-                  <span className="text-pretty">
-                    &ldquo;{CATEGORY_SAMPLES[category.key]}&rdquo;
-                  </span>
-                  <span className="shrink-0 tabular-nums">
-                    {category.signals.length} checks
-                  </span>
-                </div>
+
               </li>
             ))}
           </ul>

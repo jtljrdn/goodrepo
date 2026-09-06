@@ -36,17 +36,19 @@ const IMPACT_STYLE = {
 export function Section({
   title,
   hint,
+  action,
   children,
 }: {
   title: string
   hint?: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
     <section className="border-t border-border/60 py-10">
-      <div className="mb-6 flex items-baseline justify-between gap-4">
+      <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <h2 className="text-sm font-medium tracking-tight">{title}</h2>
-        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+        {action ?? (hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null)}
       </div>
       {children}
     </section>
@@ -81,13 +83,13 @@ const SIGNAL_TONE = {
   "not-measured": "text-muted-foreground/60",
 } as const
 
-export function ScoreDial({ score }: { score: number | null }) {
+export function ScoreDial({ score, className }: { score: number | null; className?: string }) {
   const radius = 44
   const circumference = 2 * Math.PI * radius
 
   if (score === null) {
     return (
-      <div className="flex size-32 shrink-0 items-center justify-center border border-border/60">
+      <div className={cn("flex size-32 shrink-0 items-center justify-center border border-border/60", className)}>
         <span className="text-xs text-muted-foreground">not scored</span>
       </div>
     )
@@ -96,7 +98,7 @@ export function ScoreDial({ score }: { score: number | null }) {
   const tone = band(score)
 
   return (
-    <div className="relative size-32 shrink-0">
+    <div className={cn("relative size-32 shrink-0", className)}>
       <svg viewBox="0 0 100 100" className="size-full -rotate-90">
         <circle
           cx="50"
@@ -129,9 +131,11 @@ export function ScoreDial({ score }: { score: number | null }) {
 export function ReportHeadline({
   profile,
   overall,
+  actions,
 }: {
   profile: RepoProfile
   overall: number | null
+  actions?: React.ReactNode
 }) {
   const tone = overall === null ? null : band(overall)
   const meta = [
@@ -143,30 +147,27 @@ export function ReportHeadline({
   ].filter((item): item is string => item !== null)
 
   return (
-    <div className="flex flex-col gap-8 py-10 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">
-          {profile.owner}/
-          <span className="text-foreground">{profile.repo}</span>
-        </p>
-        <h1 className="mt-3 text-2xl font-medium tracking-tight">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-6 py-8 sm:gap-x-8 sm:py-10">
+      <div className="min-w-0">
+        <h1 className="text-xl font-medium tracking-tight sm:text-3xl">
           Agent Readiness
         </h1>
-        <p
-          className={cn(
-            "mt-1 text-sm",
-            tone ? BAND_TEXT[tone] : "text-muted-foreground"
-          )}
-        >
+        <p className="mt-2 break-all text-sm text-muted-foreground">
+          {profile.owner}/<span className="text-foreground">{profile.repo}</span>
+        </p>
+        <p className={cn("mt-3 text-sm", tone ? BAND_TEXT[tone] : "text-muted-foreground")}>
           {tone ? BAND_LABEL[tone] : "Nothing could be scored"}
         </p>
-        <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {meta.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
       </div>
-      <ScoreDial score={overall} />
+      <ScoreDial score={overall} className="size-24 sm:row-span-3 sm:size-32" />
+      <ul className="col-span-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground sm:col-span-1">
+        {meta.map((item) => <li key={item} className="break-all">{item}</li>)}
+      </ul>
+      {actions ? (
+        <div className="col-span-2 flex flex-wrap items-start gap-x-5 gap-y-3 sm:col-span-1">
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -239,9 +240,6 @@ export function CategoryDetail({ category }: { category: ScoredCategory }) {
         </span>
       </summary>
       <div className="pb-6 pl-8">
-        <p className="mb-4 font-sans text-xs text-muted-foreground">
-          {category.question}
-        </p>
         <ul className="space-y-1.5">
           {category.signals.map((signal) => (
             <li key={signal.id} className="flex items-start gap-2.5 text-xs">
@@ -307,11 +305,6 @@ export function RecommendationItem({
             <span className="text-[10px] text-muted-foreground/60">
               {recommendation.category}
             </span>
-            {recommendation.source === "deep" ? (
-              <span className="border border-border px-1.5 py-px text-[10px] text-muted-foreground/60">
-                deep scan
-              </span>
-            ) : null}
           </div>
           <p className="mt-3 max-w-2xl font-sans text-sm leading-relaxed text-muted-foreground">
             {recommendation.evidence(profile)}

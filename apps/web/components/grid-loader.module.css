@@ -1,0 +1,50 @@
+.grid {
+  display: inline-grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 8%;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+.cell {
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.2;
+  animation: scan-wave 1.8s ease-in-out infinite;
+}
+
+.deep .cell {
+  animation-name: thinking-wave;
+  animation-duration: 2.4s;
+}
+
+@keyframes thinking-wave {
+  0%, 60%, 100% {
+    opacity: 0.2;
+    transform: scale(0.65);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scan-wave {
+  0%, 65%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grid .cell {
+    animation: none;
+    opacity: 0.6;
+  }
+}

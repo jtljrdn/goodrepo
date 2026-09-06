@@ -192,3 +192,43 @@ test("any tool-specific instruction file satisfies claudeMd", () => {
     false
   )
 })
+
+test("empty headings and prose mentions do not establish instructions", () => {
+  const result = detectDocs(
+    facts({
+      "README.md":
+        "# Architecture\n# Testing\n# Code style\n\n<!-- TODO -->\nbuild dev test",
+    }),
+    applies("bun")
+  )
+  expect(result.has.docArchitecture).toBe(false)
+  expect(result.has.docTestCommand).toBe(false)
+  expect(result.has.docBuildCommand).toBe(false)
+})
+
+test("headings inside code fences do not establish documentation sections", () => {
+  expect(
+    detectDocs(
+      facts({ "README.md": "```md\n# Architecture\nexample text\n```" }),
+      applies()
+    ).has.docArchitecture
+  ).toBe(false)
+})
+
+test("Bun file-targeted tests are documented single tests", () => {
+  expect(
+    detectDocs(
+      facts({ "README.md": "`bun test src/a.test.ts`" }),
+      applies("bun")
+    ).has.singleTestDocumented
+  ).toBe(true)
+})
+
+test("documented script names must exist when the manifest is available", () => {
+  const input = facts({
+    "README.md": "`npm run test`\n`npm run build`",
+    "package.json": JSON.stringify({ scripts: { dev: "vite" } }),
+  })
+  expect(detectDocs(input, applies("npm")).has.docTestCommand).toBe(false)
+  expect(detectDocs(input, applies("npm")).has.docBuildCommand).toBe(false)
+})

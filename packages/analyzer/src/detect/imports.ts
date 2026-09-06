@@ -1,3 +1,5 @@
+import { posix } from "node:path"
+import { importResolver, type ImportResolver } from "../resolve-import"
 import { isTestFile } from "../skip"
 import { measure, passes } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
@@ -30,7 +32,7 @@ const DB_LIBS = [
 const DB_PATHS =
   /(^|\/)(migrations?|prisma|supabase)\/|(^|\/)(drizzle|knexfile)\.config\.|\.prisma$/
 
-const UI_SEGMENTS = new Set(["components", "app", "pages", "views", "screens"])
+const UI_SEGMENTS = new Set(["components", "views", "screens"])
 
 const ROUTE_PATTERNS = [
   /\/route\.[cm]?[jt]sx?$/,
@@ -39,9 +41,6 @@ const ROUTE_PATTERNS = [
   /(^|\/)(routes?|controllers?)\//,
   /\.(controller|routes?)\.[cm]?[jt]s$/,
 ]
-
-// Path aliases that point back into this repository, not at a package.
-const LOCAL_IMPORT = /^(\.|@\/|~\/|#|\$lib\/)/
 
 function median(values: number[]): number {
   if (values.length === 0) return 0
@@ -58,33 +57,62 @@ function rootPackage(specifier: string): string {
   return parts[0] ?? ""
 }
 
-function dirOf(path: string): string {
-  const slash = path.lastIndexOf("/")
-  return slash === -1 ? "" : path.slice(0, slash)
+function isUiFile(
+  file: RawFacts["codeFiles"][number],
+  serverComponents: boolean
+): boolean {
+  if (isTestFile(file.path) || ROUTE_PATTERNS.some((re) => re.test(file.path)))
+    return false
+  if (file.client) return true
+  // App Router files may be server components; only explicit client modules are UI evidence there.
+  if (
+    file.path.split("/").includes("app") ||
+    (serverComponents && !file.path.split("/").includes("pages"))
+  )
+    return false
+  return (
+    file.path.split("/").some((seg) => UI_SEGMENTS.has(seg)) ||
+    /(^|\/)pages\/.*\.[jt]sx$/.test(file.path)
+  )
 }
 
-function isUiFile(path: string): boolean {
-  return path.split("/").some((seg) => UI_SEGMENTS.has(seg))
-}
-
-export function detectImports(facts: RawFacts) {
+export function detectImports(
+  facts: RawFacts,
+  repository = facts,
+  prefix = "",
+  resolve: ImportResolver = importResolver(repository)
+) {
   const measurements: Partial<Record<SignalId, Measurement>> = {}
   const sampled = facts.codeFiles.filter(
-    (f): f is typeof f & { imports: string[] } => f.imports !== null
+    (f): f is typeof f & { imports: string[] } =>
+      f.imports !== null && !isTestFile(f.path)
   )
 
   const deps = readDependencies(readPackageJson(facts))
-  const declared = deps.filter((name) => VALIDATION_LIBS.includes(name))
-  const validationShare = declared.length === 0 ? 0 : 1 / declared.length
+  const counts = new Map<string, number>()
+  for (const file of sampled)
+    for (const name of new Set(file.imports.map(rootPackage))) {
+      if (VALIDATION_LIBS.includes(name))
+        counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+  const declared = [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name]) => name)
+  const validationTotal = [...counts.values()].reduce((sum, n) => sum + n, 0)
+  const validationShare = validationTotal
+    ? Math.max(...counts.values()) / validationTotal
+    : 0
   measurements.singleValidationLib = measure(
     "validationDominance",
     validationShare
   )
 
-  const dbDeclared = deps.some((name) => DB_LIBS.includes(name))
+  const dbDeclared =
+    deps.some((name) => DB_LIBS.includes(name)) ||
+    sampled.some((f) => f.imports.some((s) => DB_LIBS.includes(rootPackage(s))))
   const usesDatabase = dbDeclared || facts.paths.some((p) => DB_PATHS.test(p))
 
-  const uiFiles = sampled.filter((f) => isUiFile(f.path))
+  const uiFiles = sampled.filter((f) => isUiFile(f, deps.includes("next")))
   const uiWithDb = uiFiles.filter((f) =>
     f.imports.some((s) => DB_LIBS.includes(rootPackage(s)))
   ).length
@@ -94,7 +122,11 @@ export function detectImports(facts: RawFacts) {
   const fanouts = sampled.map((file) => {
     const dirs = new Set<string>()
     for (const specifier of file.imports) {
-      if (LOCAL_IMPORT.test(specifier)) dirs.add(dirOf(specifier))
+      const target = resolve(
+        prefix ? `${prefix}/${file.path}` : file.path,
+        specifier
+      )
+      if (target) dirs.add(posix.dirname(target))
     }
     return dirs.size
   })
@@ -109,7 +141,10 @@ export function detectImports(facts: RawFacts) {
     ).length,
     measurements,
     has: {
-      singleValidationLib: declared.length > 0 ? declared.length === 1 : null,
+      singleValidationLib:
+        declared.length > 0
+          ? passes("validationDominance", validationShare)
+          : null,
       singleDataLayer:
         dbDeclared && uiFiles.length > 0
           ? passes("directDbInUi", dbShare)

@@ -40,6 +40,10 @@ const LOCKFILES = new Set([
 const KEPT_FILES = new Set([
   "package.json",
   "tsconfig.json",
+  "jsconfig.json",
+  "pnpm-workspace.yaml",
+  "gemini.md",
+  ".github/copilot-instructions.md",
   "readme.md",
   "agents.md",
   "claude.md",
@@ -58,6 +62,7 @@ const KEPT_FILES = new Set([
 const KEPT_PREFIXES = [".github/workflows/", ".devcontainer/", ".cursor/rules"]
 
 const KEPT_PATTERNS = [
+  /^(ts|js)config(\.[\w-]+)?\.json$/,
   /^(vitest|jest|playwright)\.config\.[cm]?[jt]s$/,
   /^(eslint|biome|oxlint)\.config\.[cm]?[jt]s$/,
   /^\.eslintrc(\.[a-z]+)?$/,
@@ -94,12 +99,14 @@ export function isDocFile(path: string): boolean {
 }
 
 export function isTestFile(path: string): boolean {
-  if (!CODE_EXT.has(ext(path))) return false
+  if (!isCodeFile(path)) return false
   if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(base(path))) return true
   return path.split("/").some((seg) => seg === "__tests__" || seg === "tests")
 }
 
 export function isKeptFile(path: string): boolean {
+  if (isSkippedPath(path)) return false
+  if (path === ".github/copilot-instructions.md") return true
   const b = base(path)
   if (KEPT_FILES.has(b)) return true
   if (KEPT_PREFIXES.some((p) => path.startsWith(p))) return true

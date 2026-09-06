@@ -141,3 +141,22 @@ test("every signal the agent can answer is marked as needing a deep scan", () =>
     expect(signal?.text, id).toContain("needs a deep scan")
   }
 })
+
+test("uninspected checks are not labeled as inapplicable", () => {
+  const profile = profileWith({ lowFanout: null })
+  profile.unmeasured = { lowFanout: "not-inspected" }
+  const signal = scoreRepo(profile)
+    .categories.flatMap((c) => c.signals)
+    .find((s) => s.id === "lowFanout")
+  expect(signal?.text).toContain("not inspected")
+  expect(signal?.text).not.toContain("does not apply")
+})
+
+test("a deep answer supersedes static inspection limits", () => {
+  const profile = profileWith({ singleDataLayer: null })
+  profile.unmeasured = { singleDataLayer: "not-inspected" }
+  const signal = scoreRepo(profile, new Set(["singleDataLayer"]))
+    .categories.flatMap((c) => c.signals)
+    .find((s) => s.id === "singleDataLayer")
+  expect(signal?.text).toContain("nothing like this")
+})

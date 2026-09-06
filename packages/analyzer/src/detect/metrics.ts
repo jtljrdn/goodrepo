@@ -52,7 +52,7 @@ function namingConsistency(paths: string[]): number | null {
 export function detectMetrics(facts: RawFacts) {
   const sizes = facts.codeFiles.map((f) => f.bytes)
   const medianFileBytes = Math.round(median(sizes))
-  const largestFileBytes = Math.max(0, ...sizes)
+  const largestFileBytes = sizes.reduce((max, size) => Math.max(max, size), 0)
   const measurements: Partial<Record<SignalId, Measurement>> = {}
 
   measurements.smallFiles = measure("medianFileBytes", medianFileBytes)

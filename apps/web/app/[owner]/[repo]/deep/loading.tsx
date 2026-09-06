@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/site-header"
 import { Elapsed } from "@/components/elapsed"
+import { GridLoader } from "@/components/grid-loader"
 
 const STEPS = [
   "Copying this commit into a temporary workspace",
@@ -24,16 +25,19 @@ export default function Loading() {
               will have to come back to see the result.
             </p>
           </div>
-          <div className="flex size-32 shrink-0 animate-pulse items-center justify-center rounded-full border-4 border-border text-xs text-muted-foreground">
-            <Elapsed />
+          <div className="flex size-32 shrink-0 flex-col items-center justify-center gap-4">
+            <span role="status" className="flex text-success">
+              <GridLoader variant="deep" className="text-5xl" />
+              <span className="sr-only">Deep scan in progress</span>
+            </span>
+            <span className="text-xs text-muted-foreground"><Elapsed /></span>
           </div>
         </div>
         <ul className="space-y-2 border-t border-border/60 py-8 text-xs">
-          {STEPS.map((step, index) => (
+          {STEPS.map((step) => (
             <li
               key={step}
-              className="flex animate-pulse items-center gap-2 text-muted-foreground"
-              style={{ animationDelay: `${index * 120}ms` }}
+              className="flex items-center gap-2 text-muted-foreground"
             >
               <span className="text-success">▸</span>
               {step}

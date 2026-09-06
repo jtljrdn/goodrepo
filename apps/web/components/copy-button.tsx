@@ -17,10 +17,14 @@ const LABELS: Record<CopyState, string> = {
 export function CopyButton({
   value,
   label,
+  text = "Copy",
+  manualFallback = false,
   className,
 }: {
   value: string
   label: string
+  text?: string
+  manualFallback?: boolean
   className?: string
 }) {
   const [state, setState] = React.useState<CopyState>("idle")
@@ -34,10 +38,10 @@ export function CopyButton({
       setState("error")
     }
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setState("idle"), 2000)
+    timer.current = setTimeout(() => setState(current => current === "error" && manualFallback ? current : "idle"), 2000)
   }
 
-  return (
+  const button = (
     <Button
       type="button"
       variant="outline"
@@ -59,10 +63,31 @@ export function CopyButton({
             "animate-in text-success duration-200 zoom-in-75"
         )}
       />
-      <span aria-hidden>{LABELS[state]}</span>
+      <span aria-hidden>{state === "idle" ? text : LABELS[state]}</span>
       <span aria-live="polite" className="sr-only">
         {state === "idle" ? "" : LABELS[state]}
       </span>
     </Button>
+  )
+
+  if (!manualFallback) return button
+  return (
+    <div className="flex max-w-full flex-col items-start gap-2 sm:items-end">
+      {button}
+      {state === "error" ? (
+        <div className="w-full max-w-md">
+          <label className="text-xs text-muted-foreground">
+            Clipboard unavailable. Select and copy the instructions below.
+            <textarea
+              readOnly
+              value={value}
+              onFocus={event => event.currentTarget.select()}
+              rows={8}
+              className="mt-2 block w-full border border-input bg-background p-3 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
   )
 }

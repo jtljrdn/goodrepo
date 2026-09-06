@@ -129,6 +129,20 @@ The price of outliving the deployment is that invalidation becomes manual. Each 
 produced the cached values changes** — a detector, a threshold, the scoring, the agent's
 questions, or the cached shape — or old reports keep being served. Errors are never cached, so
 anything transient (a GitHub rate limit, a sandbox that died) must throw rather than return.
+**Static content reads are bounded and failures are not findings.** The scan first reads
+`package.json` and `pnpm-workspace.yaml`, then discovers declared workspace packages and
+selects configuration plus source samples. `CAPS` owns the file, workspace, byte and
+concurrency limits. `ScanFetchError` must escape the cached computation for transport errors,
+rate limits, malformed responses and partial GraphQL failures; the web layer converts it to
+a retryable failure outside the cache. A truncated GitHub tree is rejected rather than scored.
+
+The analyzer parses JavaScript/TypeScript syntax and YAML as data; it never executes repository
+scripts or configuration. Workspace checks are measured within each package before aggregation.
+`profile.unmeasured` distinguishes checks that could not be inspected from those that do not
+apply, and `sample` / `configCoverage` disclose inspection coverage. Preserve those distinctions
+when adding detectors. Both static and deep cache versions must change when cached report
+measurements or scoring change, because a deep report includes the static profile.
+
 - Point values and pass/fail cutoffs live in `packages/analyzer/src/thresholds.ts`. Change them there, never inline at a call site.
 
 ### Dependency direction

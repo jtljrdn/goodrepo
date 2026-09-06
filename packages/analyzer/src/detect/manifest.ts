@@ -1,3 +1,5 @@
+import { workspacePaths } from "../workspaces"
+import { usableScript } from "../commands"
 import type { RawFacts } from "../types"
 
 const LOCKFILES: Record<string, string> = {
@@ -87,7 +89,9 @@ function hasScript(
   name: RegExp,
   fallback?: RegExp
 ): boolean {
-  const entries = Object.entries(scripts)
+  const entries = Object.entries(scripts).filter(([, command]) =>
+    usableScript(command)
+  )
   if (entries.some(([script]) => name.test(script))) return true
   if (!fallback) return false
   return entries.some(([, command]) => fallback.test(command))
@@ -101,7 +105,12 @@ export function detectManifest(facts: RawFacts) {
 
   const lockName = Object.keys(LOCKFILES).find((name) => rootNames.has(name))
   const pinned =
-    typeof pkg?.packageManager === "string" ? pkg.packageManager : null
+    typeof pkg?.packageManager === "string" &&
+    /^(bun|npm|pnpm|yarn)@\d+\.\d+\.\d+(?:[-+][\w.+-]+)?$/.test(
+      pkg.packageManager
+    )
+      ? pkg.packageManager
+      : null
   const packageManager =
     pinned ?? (lockName ? (LOCKFILES[lockName] ?? null) : null)
 
@@ -109,7 +118,8 @@ export function detectManifest(facts: RawFacts) {
   const enginesNode =
     typeof engines === "object" &&
     engines !== null &&
-    typeof (engines as Record<string, unknown>).node === "string"
+    typeof (engines as Record<string, unknown>).node === "string" &&
+    /^v?\d+(\.\d+){0,2}$/.test((engines as Record<string, string>).node!)
 
   const tsFiles = facts.codeFiles.filter((f) =>
     /\.[cm]?tsx?$/.test(f.path)
@@ -133,13 +143,27 @@ export function detectManifest(facts: RawFacts) {
     dependencies: deps,
     language: typescript ? "TypeScript" : "JavaScript",
     library,
-    workspaceRoots: readWorkspaceRoots(pkg, facts),
+    workspaceRoots: [
+      ...new Set([
+        ...readWorkspaceRoots(pkg, facts),
+        ...workspacePaths(
+          facts.paths.map((path) => ({ path, bytes: 0 })),
+          facts.keptText
+        ).map((path) => path.split("/")[0]!),
+      ]),
+    ],
     has: {
-      lockfile: Boolean(lockName) && pinned !== null,
+      lockfile:
+        Boolean(lockName) &&
+        pinned !== null &&
+        pinned.startsWith(`${LOCKFILES[lockName!]}@`),
       nodePinned:
         enginesNode ||
         RUNTIME_FILES.some((name) => rootNames.has(name)) ||
-        typeof pkg?.volta === "object",
+        (pkg?.volta !== null &&
+          typeof pkg?.volta === "object" &&
+          typeof (pkg.volta as Record<string, unknown>).node === "string" &&
+          /^\d+\.\d+\.\d+$/.test((pkg.volta as Record<string, string>).node!)),
       buildScript: hasScript(scripts, /^build([:-]|$)/),
       lintScript: hasScript(scripts, /^lint([:-]|$)/),
       formatScript: hasScript(

@@ -34,15 +34,23 @@ test("passes when exactly one validation library is declared", () => {
   expect(result.validationPatterns).toEqual(["zod"])
 })
 
-test("fails when two validation libraries are declared", () => {
-  const result = detectImports(withDeps([["a.ts", ["zod"]]], ["zod", "yup"]))
+test("fails when sampled source uses two validation libraries equally", () => {
+  const result = detectImports(
+    withDeps(
+      [
+        ["a.ts", ["zod"]],
+        ["b.ts", ["yup"]],
+      ],
+      ["zod", "yup"]
+    )
+  )
   expect(result.has.singleValidationLib).toBe(false)
   expect(result.validationPatterns.sort()).toEqual(["yup", "zod"])
 })
 
-test("declared dependencies beat the sample, which can miss a rare import", () => {
+test("an unused declared dependency does not establish validation consistency", () => {
   const result = detectImports(withDeps([["a.ts", ["react"]]], ["zod"]))
-  expect(result.has.singleValidationLib).toBe(true)
+  expect(result.has.singleValidationLib).toBeNull()
 })
 
 test("no validation library at all is not applicable, not a failure", () => {
@@ -144,4 +152,70 @@ test("counts API route files across framework conventions", () => {
     ])
   )
   expect(result.apiRoutes).toBe(4)
+})
+
+test("server routes and App Router server components are not client UI", () => {
+  const result = detectImports(
+    withDeps(
+      [
+        ["app/api/users/route.ts", ["postgres"]],
+        ["app/page.tsx", ["postgres"]],
+      ],
+      ["postgres"]
+    )
+  )
+  expect(result.has.singleDataLayer).toBeNull()
+})
+
+test("client directives identify UI even outside a conventional component folder", () => {
+  const input = withDeps([["src/widgets/a.tsx", ["postgres"]]], ["postgres"])
+  input.codeFiles[0]!.client = true
+  expect(detectImports(input).has.singleDataLayer).toBe(false)
+})
+
+test("workspace imports and tsconfig aliases contribute canonical directories", () => {
+  const input = facts([
+    [
+      "apps/web/src/a.ts",
+      ["@workspace/a", "@workspace/b", "@/data/x", "./data/y"],
+    ],
+  ])
+  input.paths.push("packages/a/package.json", "packages/b/package.json")
+  input.keptText.set(
+    "packages/a/package.json",
+    JSON.stringify({ name: "@workspace/a" })
+  )
+  input.keptText.set(
+    "packages/b/package.json",
+    JSON.stringify({ name: "@workspace/b" })
+  )
+  input.keptText.set(
+    "apps/web/tsconfig.json",
+    '{ // JSONC\n "compilerOptions": {"baseUrl":".", "paths":{"@/*":["src/*"]}}}'
+  )
+  expect(detectImports(input).measurements.lowFanout?.value).toBe(3)
+})
+
+test("validation dominance is measured by usage, excluding tests", () => {
+  const input = withDeps(
+    [
+      ...Array.from(
+        { length: 9 },
+        (_, i) => [`src/a${i}.ts`, ["zod"]] as [string, string[]]
+      ),
+      ["src/b.ts", ["yup"]],
+      ["src/c.test.ts", ["joi"]],
+    ],
+    ["zod", "yup", "joi"]
+  )
+  expect(detectImports(input).has.singleValidationLib).toBe(true)
+  expect(detectImports(input).measurements.singleValidationLib?.value).toBe(0.9)
+})
+
+test("Next server components outside app are not mistaken for clients", () => {
+  expect(
+    detectImports(
+      withDeps([["components/Server.tsx", ["postgres"]]], ["postgres", "next"])
+    ).has.singleDataLayer
+  ).toBeNull()
 })

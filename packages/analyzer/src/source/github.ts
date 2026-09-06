@@ -1,7 +1,14 @@
+import { CAPS } from "../thresholds"
 import type { RepoMeta, TreeEntry } from "../types"
 
 export type ScanFailure = {
-  kind: "not-js" | "not-found" | "rate-limited" | "empty" | "too-large"
+  kind:
+    | "not-js"
+    | "not-found"
+    | "rate-limited"
+    | "empty"
+    | "too-large"
+    | "unavailable"
   message: string
 }
 
@@ -9,6 +16,68 @@ const API = "https://api.github.com"
 const GRAPHQL = "https://api.github.com/graphql"
 
 const BATCH_SIZE = 100
+
+export class ScanFetchError extends Error {
+  constructor(
+    public readonly kind: "rate-limited" | "unavailable" = "unavailable"
+  ) {
+    super(
+      kind === "rate-limited"
+        ? "GitHub rate limit reached. Try again shortly."
+        : "GitHub could not finish reading the repository. Try again shortly."
+    )
+  }
+}
+
+async function request(url: string, init: RequestInit = {}): Promise<Response> {
+  let response: Response
+  try {
+    response = await fetch(url, {
+      ...init,
+      signal: AbortSignal.timeout(CAPS.fetchTimeoutMs),
+    })
+  } catch {
+    throw new ScanFetchError()
+  }
+  if (
+    response.status === 429 ||
+    (response.status === 403 &&
+      (response.headers.get("x-ratelimit-remaining") === "0" ||
+        response.headers.has("retry-after")))
+  )
+    throw new ScanFetchError("rate-limited")
+  if (!response.ok && response.status !== 404 && response.status !== 409)
+    throw new ScanFetchError()
+  return response
+}
+
+async function readJson(res: Response): Promise<unknown> {
+  try {
+    return await res.json()
+  } catch {
+    throw new ScanFetchError()
+  }
+}
+
+async function concurrent<T, R>(
+  items: T[],
+  run: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  let next = 0
+  await Promise.all(
+    Array.from(
+      { length: Math.min(CAPS.fetchConcurrency, items.length) },
+      async () => {
+        while (next < items.length) {
+          const index = next++
+          results[index] = await run(items[index]!)
+        }
+      }
+    )
+  )
+  return results
+}
 
 function headers(token?: string): Record<string, string> {
   const base: Record<string, string> = {
@@ -69,7 +138,7 @@ export async function fetchRepoMeta(
   repo: string,
   token?: string
 ): Promise<RepoMeta | ScanFailure> {
-  const res = await fetch(`${API}/repos/${owner}/${repo}`, {
+  const res = await request(`${API}/repos/${owner}/${repo}`, {
     headers: headers(token),
   })
   const failure = failureFor(
@@ -80,9 +149,9 @@ export async function fetchRepoMeta(
   if (!res.ok)
     return { kind: "not-found", message: "Could not reach that repository." }
 
-  const body: unknown = await res.json()
+  const body: unknown = await readJson(res)
   if (typeof body !== "object" || body === null) {
-    return { kind: "not-found", message: "Could not read that repository." }
+    throw new ScanFetchError()
   }
   const data = body as Record<string, unknown>
 
@@ -111,9 +180,12 @@ export async function fetchHeadSha(
   ref: string,
   token?: string
 ): Promise<string | ScanFailure> {
-  const res = await fetch(`${API}/repos/${owner}/${repo}/commits/${ref}`, {
-    headers: headers(token),
-  })
+  const res = await request(
+    `${API}/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`,
+    {
+      headers: headers(token),
+    }
+  )
   const failure = failureFor(
     res.status,
     res.headers.get("x-ratelimit-remaining")
@@ -122,7 +194,7 @@ export async function fetchHeadSha(
   if (!res.ok)
     return { kind: "not-found", message: "Could not read the default branch." }
 
-  const body: unknown = await res.json()
+  const body: unknown = await readJson(res)
   if (
     typeof body === "object" &&
     body !== null &&
@@ -130,7 +202,7 @@ export async function fetchHeadSha(
   ) {
     return (body as Record<string, unknown>).sha as string
   }
-  return { kind: "not-found", message: "Could not read the default branch." }
+  throw new ScanFetchError()
 }
 
 export async function fetchTree(
@@ -139,7 +211,7 @@ export async function fetchTree(
   sha: string,
   token?: string
 ): Promise<RepoTree | ScanFailure> {
-  const res = await fetch(
+  const res = await request(
     `${API}/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`,
     {
       headers: headers(token),
@@ -153,12 +225,13 @@ export async function fetchTree(
   if (!res.ok)
     return { kind: "not-found", message: "Could not read the repository tree." }
 
-  const body: unknown = await res.json()
+  const body: unknown = await readJson(res)
   if (typeof body !== "object" || body === null) {
-    return { kind: "not-found", message: "Could not read the repository tree." }
+    throw new ScanFetchError()
   }
   const data = body as Record<string, unknown>
-  const raw = Array.isArray(data.tree) ? data.tree : []
+  if (!Array.isArray(data.tree)) throw new ScanFetchError()
+  const raw = data.tree
 
   const entries: TreeEntry[] = []
   for (const item of raw) {
@@ -209,39 +282,46 @@ export async function fetchBlobs(
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>()
   const batches: string[][] = []
-  for (let start = 0; start < paths.length; start += BATCH_SIZE) {
-    batches.push(paths.slice(start, start + BATCH_SIZE))
+  const unique = [...new Set(paths)]
+  for (let start = 0; start < unique.length; start += BATCH_SIZE) {
+    batches.push(unique.slice(start, start + BATCH_SIZE))
   }
 
-  const responses = await Promise.all(
-    batches.map(async (batch) => {
-      const res = await fetch(GRAPHQL, {
-        method: "POST",
-        headers: { ...headers(token), "content-type": "application/json" },
-        body: JSON.stringify({ query: buildQuery(owner, repo, sha, batch) }),
-      })
-      if (!res.ok) return null
-      const body: unknown = await res.json()
-      return { batch, body }
+  const responses = await concurrent(batches, async (batch) => {
+    const res = await request(GRAPHQL, {
+      method: "POST",
+      headers: { ...headers(token), "content-type": "application/json" },
+      body: JSON.stringify({ query: buildQuery(owner, repo, sha, batch) }),
     })
-  )
+    if (!res.ok) throw new ScanFetchError()
+    const body: unknown = await readJson(res)
+    return { batch, body }
+  })
 
   for (const result of responses) {
-    if (!result) continue
     const { batch, body } = result
-    if (typeof body !== "object" || body === null) continue
+    if (typeof body !== "object" || body === null) throw new ScanFetchError()
+    const errors = (body as Record<string, unknown>).errors
+    if (Array.isArray(errors) && errors.length > 0)
+      throw new ScanFetchError(
+        errors.some((e) => e?.type === "RATE_LIMITED")
+          ? "rate-limited"
+          : "unavailable"
+      )
     const data = (body as Record<string, unknown>).data
-    if (typeof data !== "object" || data === null) continue
+    if (typeof data !== "object" || data === null) throw new ScanFetchError()
     const node = (data as Record<string, unknown>).repository
-    if (typeof node !== "object" || node === null) continue
+    if (typeof node !== "object" || node === null) throw new ScanFetchError()
 
     const fields = node as Record<string, unknown>
     batch.forEach((path, i) => {
       const value = fields[`f${i}`]
-      if (typeof value !== "object" || value === null) return
+      if (typeof value !== "object" || value === null)
+        throw new ScanFetchError()
       const blob = value as Record<string, unknown>
       if (blob.isBinary === true) return
-      if (typeof blob.text === "string") out.set(path, blob.text)
+      if (typeof blob.text !== "string") throw new ScanFetchError()
+      out.set(path, blob.text)
     })
   }
 
@@ -255,15 +335,18 @@ export async function fetchBlobsRest(
   paths: string[]
 ): Promise<Map<string, string>> {
   const out = new Map<string, string>()
-  const results = await Promise.all(
-    paths.map(async (path) => {
-      const res = await fetch(
-        `${API}/repos/${owner}/${repo}/contents/${encodeURI(path)}?ref=${sha}`,
-        { headers: { ...headers(), accept: "application/vnd.github.raw" } }
-      )
-      return res.ok ? ([path, await res.text()] as const) : null
-    })
-  )
+  const results = await concurrent([...new Set(paths)], async (path) => {
+    const res = await request(
+      `${API}/repos/${owner}/${repo}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${sha}`,
+      { headers: { ...headers(), accept: "application/vnd.github.raw" } }
+    )
+    if (!res.ok) throw new ScanFetchError()
+    try {
+      return [path, await res.text()] as const
+    } catch {
+      throw new ScanFetchError()
+    }
+  })
   for (const result of results) if (result) out.set(result[0], result[1])
   return out
 }

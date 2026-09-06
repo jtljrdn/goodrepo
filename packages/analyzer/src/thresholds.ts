@@ -23,7 +23,11 @@ export function measure(key: ThresholdKey, value: number): Measurement {
 
 export const CAPS = {
   importSample: 200,
-  configFiles: 40,
+  scanBytes: 12 * 1024 * 1024,
+  fetchConcurrency: 6,
+  fetchTimeoutMs: 20_000,
+  configFiles: 80,
+  workspacePackages: 40,
   perFileBytes: 2 * 1024 * 1024,
   sandboxVcpus: 2,
   sandboxTimeoutMs: 5 * 60_000,

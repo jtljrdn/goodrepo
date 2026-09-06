@@ -13,8 +13,7 @@
     "@types/node": "^20",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "eslint": "^9",
-    "typescript": "^5"
+    "eslint": "^9"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -24,6 +23,8 @@
   "dependencies": {
     "@vercel/sandbox": "^3.2.1",
     "ai": "^7.0.87",
-    "zod": "^4.5.4"
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4",
+    "typescript": "^5"
   }
 }

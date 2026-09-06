@@ -1,4 +1,4 @@
-import { GENERATED_DIRS, isTestFile } from "../skip"
+import { GENERATED_DIRS, isCodeFile, isTestFile } from "../skip"
 import { measure, passes } from "../thresholds"
 import type { Measurement, RawFacts, SignalId } from "../types"
 
@@ -87,7 +87,9 @@ function primarySourceRoot(codePaths: string[]): string {
 }
 
 export function detectStructure(facts: RawFacts, workspaceRoots: string[]) {
-  const codePaths = facts.codeFiles.map((f) => f.path)
+  const codePaths = facts.codeFiles
+    .filter((f) => isCodeFile(f.path))
+    .map((f) => f.path)
   const measurements: Partial<Record<SignalId, Measurement>> = {}
 
   const nested = codePaths.filter((p) => p.includes("/"))
@@ -100,7 +102,7 @@ export function detectStructure(facts: RawFacts, workspaceRoots: string[]) {
 
   // ponytail: p90 rather than max, so one deep fixture folder cannot fail a repo
   const depth = percentile(
-    facts.paths.map((p) => p.split("/").length),
+    codePaths.map((p) => p.split("/").length),
     0.9
   )
   measurements.shallowTree = measure("maxDepth", depth)
@@ -123,22 +125,41 @@ export function detectStructure(facts: RawFacts, workspaceRoots: string[]) {
     testPaths.length > 0 ? colocated / testPaths.length : 0
   measurements.colocatedTests = measure("testColocation", colocationShare)
 
-  const root = primarySourceRoot(codePaths)
-  const children = new Set<string>()
-  for (const path of codePaths) {
-    if (!root || !path.startsWith(`${root}/`)) continue
-    const rest = path.slice(root.length + 1)
-    const slash = rest.indexOf("/")
-    if (slash > 0) children.add(rest.slice(0, slash))
+  const packageRoots = facts.paths
+    .filter(
+      (p) => p.endsWith("/package.json") && workspaceRoots.includes(topLevel(p))
+    )
+    .map(dirOf)
+  const groups = packageRoots.length
+    ? packageRoots.map((root) =>
+        codePaths
+          .filter((p) => p.startsWith(`${root}/`))
+          .map((p) => p.slice(root.length + 1))
+      )
+    : [codePaths]
+  const shares: number[] = []
+  for (const paths of groups) {
+    const root = primarySourceRoot(paths)
+    const children = new Set<string>()
+    for (const path of paths) {
+      if (!root || !path.startsWith(`${root}/`)) continue
+      const rest = path.slice(root.length + 1)
+      const slash = rest.indexOf("/")
+      if (slash > 0) children.add(rest.slice(0, slash))
+    }
+    if (children.size)
+      shares.push(
+        [...children].filter((name) => TYPE_NAMES.has(name)).length /
+          children.size
+      )
   }
-  const typeNamed = [...children].filter((name) => TYPE_NAMES.has(name)).length
-  const typeShare = children.size > 0 ? typeNamed / children.size : 0
+  const typeShare = shares.length ? Math.max(...shares) : 0
   measurements.featureFolders = measure("typeNamedFolders", typeShare)
 
   return {
-    maxDirectoryDepth: Math.max(
-      0,
-      ...facts.paths.map((p) => p.split("/").length)
+    maxDirectoryDepth: facts.paths.reduce(
+      (max, p) => Math.max(max, p.split("/").length),
+      0
     ),
     directories: new Set(facts.paths.map(dirOf).filter(Boolean)).size,
     measurements,
@@ -155,7 +176,7 @@ export function detectStructure(facts: RawFacts, workspaceRoots: string[]) {
         )
       ),
       featureFolders:
-        children.size > 0 ? passes("typeNamedFolders", typeShare) : null,
+        shares.length > 0 ? passes("typeNamedFolders", typeShare) : null,
     },
   }
 }

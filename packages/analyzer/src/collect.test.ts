@@ -4,6 +4,7 @@ import {
   chooseSample,
   collect,
   extractImports,
+  withinBudget,
 } from "./collect"
 import type { TreeEntry } from "./types"
 
@@ -140,4 +141,92 @@ test("chooseConfigFiles ignores nested config files that no detector reads", () 
   expect(chosen).toContain("README.md")
   expect(chosen).toContain("package.json")
   expect(chosen.some((p) => p.startsWith("packages/"))).toBe(false)
+})
+
+test("syntax extraction distinguishes literals, comments and template expressions", () => {
+  expect(extractImports(`const s = " import x from 'fake'";`)).toEqual([])
+  expect(
+    extractImports(`const s = "/*"; import x from "real"; const t = "*/";`)
+  ).toEqual(["real"])
+  expect(extractImports('const s = `hello ${import("./real")}`')).toEqual([
+    "./real",
+  ])
+  const result = collect(
+    [entry("app/page.tsx")],
+    new Map([
+      [
+        "app/page.tsx",
+        `'use client'; // process.env.FAKE\nconst s = 'process.env.FAKE';`,
+      ],
+    ]),
+    new Set(["app/page.tsx"])
+  )
+  expect(result.codeFiles[0]?.readsEnv).toBe(false)
+  expect(result.codeFiles[0]?.client).toBe(true)
+})
+
+test("missing text is never counted as sampled", () => {
+  expect(
+    collect([entry("src/a.ts")], new Map(), new Set(["src/a.ts"])).sample
+  ).toBeNull()
+})
+
+test("sampling is stable and reaches beyond alphabetical directory prefixes", () => {
+  const entries = Array.from({ length: 250 }, (_, i) =>
+    entry(`src/d${String(i).padStart(3, "0")}/a.ts`)
+  )
+  const chosen = chooseSample(entries)
+  expect(chosen).toEqual(chooseSample([...entries].reverse()))
+  expect(chosen.some((path) => path.startsWith("src/d24"))).toBe(true)
+})
+
+test("sampling gives a small workspace representation beside a large one", () => {
+  const entries = [
+    ...Array.from({ length: 250 }, (_, i) => entry(`apps/big/src/d${i}/a.ts`)),
+    entry("packages/small/src/a.ts"),
+  ]
+  expect(chooseSample(entries, 10, ["apps/big", "packages/small"])).toContain(
+    "packages/small/src/a.ts"
+  )
+})
+
+test("configuration discovery follows declared workspaces, including pnpm exclusions", () => {
+  const entries = [
+    "package.json",
+    "pnpm-workspace.yaml",
+    "modules/a/package.json",
+    "modules/a/AGENTS.md",
+    "modules/a/tsconfig.json",
+    "modules/a/vitest.config.ts",
+    "modules/excluded/package.json",
+    "examples/demo/package.json",
+  ].map((path) => entry(path))
+  const chosen = chooseConfigFiles(
+    entries,
+    new Map([
+      [
+        "pnpm-workspace.yaml",
+        "packages:\n  - modules/*\n  - '!modules/excluded'\n",
+      ],
+    ])
+  )
+  expect(chosen).toContain("modules/a/package.json")
+  expect(chosen).toContain("modules/a/AGENTS.md")
+  expect(chosen).not.toContain("modules/excluded/package.json")
+  expect(chosen).not.toContain("examples/demo/package.json")
+})
+
+test("the byte budget deduplicates requests and still fits later small files", () => {
+  const entries = [
+    entry("package.json", 4),
+    entry("huge.ts", 20),
+    entry("small.ts", 2),
+  ]
+  expect(
+    withinBudget(
+      entries,
+      ["package.json", "package.json", "huge.ts", "small.ts"],
+      6
+    )
+  ).toEqual(["package.json", "small.ts"])
 })

@@ -117,3 +117,82 @@ test("a root test script that only delegates to workspaces is not scored for a f
   expect(result.has.testConfig).toBeNull()
   expect(result.testFramework).toBeNull()
 })
+
+test("placeholder scripts and generated test files do not establish tests", () => {
+  const input = facts(
+    ["package.json", "dist/a.test.js", "node_modules/pkg/tests/a.js"],
+    {
+      "package.json": pkg({
+        scripts: { test: 'echo "Error: no test specified" && exit 1' },
+      }),
+    }
+  )
+  const result = detectTests(input)
+  expect(result.has.testScript).toBe(false)
+  expect(result.testFiles).toBe(0)
+})
+
+test("CI comments, step names, echoes and disabled steps do not run tests", () => {
+  const input = facts([".github/workflows/ci.yml"], {
+    ".github/workflows/ci.yml": `# npm test
+jobs:
+  build:
+    steps:
+      - name: npm test
+        run: echo "npm test"
+      - if: false
+        run: bun test
+      - run: npm run build
+`,
+  })
+  expect(detectTests(input).has.ciRunsTests).toBe(false)
+})
+
+test("CI follows script aliases but rejects cycles and placeholder targets", () => {
+  const workflow = "jobs:\n  test:\n    steps:\n      - run: npm run verify\n"
+  const input = (scripts: Record<string, string>) =>
+    facts(["package.json", ".github/workflows/ci.yml"], {
+      "package.json": pkg({ scripts }),
+      ".github/workflows/ci.yml": workflow,
+    })
+  expect(
+    detectTests(input({ verify: "npm run test", test: "vitest run" })).has
+      .ciRunsTests
+  ).toBe(true)
+  expect(detectTests(input({ verify: "npm run verify" })).has.ciRunsTests).toBe(
+    false
+  )
+  expect(
+    detectTests(input({ verify: 'echo "vitest run"' })).has.ciRunsTests
+  ).toBe(false)
+})
+
+test("malformed and reusable workflows are unresolved instead of absent tests", () => {
+  for (const workflow of [
+    "jobs: [",
+    "jobs:\n  tests:\n    uses: org/repo/.github/workflows/test.yml@main\n",
+  ]) {
+    expect(
+      detectTests(
+        facts([".github/workflows/ci.yml"], {
+          ".github/workflows/ci.yml": workflow,
+        })
+      ).has.ciRunsTests
+    ).toBeNull()
+  }
+})
+
+test("CI resolves scripts in the step working directory", () => {
+  const input = facts(
+    ["package.json", "apps/web/package.json", ".github/workflows/ci.yml"],
+    {
+      "package.json": pkg({ scripts: { test: 'echo "no tests"' } }),
+      "apps/web/package.json": pkg({ scripts: { verify: "vitest run" } }),
+      ".github/workflows/ci.yml":
+        "jobs:\n  check:\n    steps:\n      - working-directory: apps/web\n        run: npm run verify\n",
+    }
+  )
+  expect(detectTests(input).has.ciRunsTests).toBe(true)
+  input.keptText.delete("apps/web/package.json")
+  expect(detectTests(input).has.ciRunsTests).toBeNull()
+})

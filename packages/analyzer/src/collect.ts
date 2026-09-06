@@ -2,33 +2,18 @@ import { isCodeFile, isKeptFile, isTestFile } from "./skip"
 import { CAPS } from "./thresholds"
 import type { CodeFileFacts, RawFacts, TreeEntry } from "./types"
 
-const IMPORT_PATTERNS = [
-  /(?:^|\s)import\s+(?:[\w*{}\n\r\t, ]+\s+from\s+)?["']([^"']+)["']/g,
-  /(?:^|\s)export\s+(?:[\w*{}\n\r\t, ]+\s+)?from\s+["']([^"']+)["']/g,
-  /\brequire\(\s*["']([^"']+)["']\s*\)/g,
-  /\bimport\(\s*["']([^"']+)["']\s*\)/g,
-]
-
-const ENV_READ = /\b(process|Bun|Deno)\.env\b|import\.meta\.env/
-
-function stripCommentsAndStrings(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ")
-    .replace(/`(?:[^`\\]|\\.)*`/g, "``")
-}
+import { sourceFacts } from "./syntax"
+import { workspaceOwner, workspacePaths } from "./workspaces"
 
 export function extractImports(source: string): string[] {
-  const cleaned = stripCommentsAndStrings(source)
-  const found = new Set<string>()
-  for (const pattern of IMPORT_PATTERNS) {
-    pattern.lastIndex = 0
-    let match: RegExpExecArray | null
-    while ((match = pattern.exec(cleaned)) !== null) {
-      if (match[1]) found.add(match[1])
-    }
-  }
-  return [...found]
+  return sourceFacts(source).imports
+}
+
+// Stable across input order, without systematically preferring alphabetical prefixes.
+function hash(path: string): number {
+  let value = 2166136261
+  for (const c of path) value = Math.imul(value ^ c.charCodeAt(0), 16777619)
+  return value >>> 0
 }
 
 function dirOf(path: string): string {
@@ -38,25 +23,68 @@ function dirOf(path: string): string {
 
 export function chooseSample(
   entries: TreeEntry[],
-  limit = CAPS.importSample
+  limit: number = CAPS.importSample,
+  workspaces: string[] = []
 ): string[] {
   const eligible = entries.filter(
     (e) => isCodeFile(e.path) && e.bytes > 0 && e.bytes <= CAPS.perFileBytes
   )
-  if (eligible.length <= limit) return eligible.map((e) => e.path)
+  if (limit <= 0) return []
+  if (eligible.length <= limit) return eligible.map((e) => e.path).sort()
+  const source = eligible.filter((e) => !isTestFile(e.path))
+  if (source.length && source.length < eligible.length) {
+    const chosen = chooseSample(source, limit, workspaces)
+    return chosen.length === limit
+      ? chosen
+      : [
+          ...chosen,
+          ...chooseSample(
+            eligible.filter((e) => isTestFile(e.path)),
+            limit - chosen.length,
+            workspaces
+          ),
+        ]
+  }
 
   const byDir = new Map<string, string[]>()
+  const roots = new Set(workspaces)
   for (const entry of [...eligible].sort((a, b) => {
     const test = Number(isTestFile(a.path)) - Number(isTestFile(b.path))
-    return test !== 0 ? test : a.path.localeCompare(b.path)
+    return test !== 0
+      ? test
+      : hash(a.path) - hash(b.path) || a.path.localeCompare(b.path)
   })) {
-    const dir = dirOf(entry.path)
+    const workspace = workspaceOwner(entry.path, roots)
+    const role = isTestFile(entry.path)
+      ? "test"
+      : /(^|\/)(route\.|api\/|controllers?\/)/.test(entry.path)
+        ? "route"
+        : /\.[jt]sx$/.test(entry.path)
+          ? "ui"
+          : "source"
+    const dir = `${workspace}:${role}:${dirOf(entry.path)}`
     const bucket = byDir.get(dir)
     if (bucket) bucket.push(entry.path)
     else byDir.set(dir, [entry.path])
   }
 
-  const buckets = [...byDir.values()]
+  const groups = new Map<string, string[][]>()
+  for (const [key, bucket] of byDir) {
+    const group = key.split(":").slice(0, 2).join(":")
+    const dirs = groups.get(group) ?? []
+    dirs.push(bucket)
+    groups.set(group, dirs)
+  }
+  const buckets: string[][] = []
+  for (let round = 0; ; round++) {
+    let placed = false
+    for (const dirs of groups.values())
+      if (dirs[round]) {
+        buckets.push(dirs[round]!)
+        placed = true
+      }
+    if (!placed) break
+  }
   const chosen: string[] = []
   for (let round = 0; chosen.length < limit; round++) {
     let placed = false
@@ -72,17 +100,68 @@ export function chooseSample(
   return chosen
 }
 
-export function chooseConfigFiles(entries: TreeEntry[]): string[] {
-  const usable = entries.filter(
-    (e) => e.bytes > 0 && e.bytes <= CAPS.perFileBytes
-  )
-  const root = usable.filter((e) => !e.path.includes("/") && isKeptFile(e.path))
-  const nested = usable.filter(
-    (e) =>
-      e.path.startsWith(".github/workflows/") ||
-      e.path.startsWith(".devcontainer/")
-  )
-  return [...root, ...nested].map((e) => e.path).slice(0, CAPS.configFiles)
+export function chooseConfigFiles(
+  entries: TreeEntry[],
+  texts = new Map<string, string>(),
+  limit: number = CAPS.configFiles
+): string[] {
+  const discovered = workspacePaths(entries, texts)
+  const roots =
+    limit === Infinity
+      ? discovered
+      : discovered.slice(0, CAPS.workspacePackages)
+  const priority = (path: string) =>
+    path === "package.json"
+      ? 0
+      : path === "pnpm-workspace.yaml"
+        ? 1
+        : !path.includes("/")
+          ? 2
+          : path.endsWith("/package.json")
+            ? 3
+            : 4
+  return entries
+    .filter(
+      (e) =>
+        (limit === Infinity ||
+          (e.bytes >= 0 && e.bytes <= CAPS.perFileBytes)) &&
+        isKeptFile(e.path)
+    )
+    .filter(
+      (e) =>
+        !e.path.includes("/") ||
+        e.path.startsWith(".github/workflows/") ||
+        e.path.startsWith(".devcontainer/") ||
+        e.path.startsWith(".cursor/rules/") ||
+        e.path === ".github/copilot-instructions.md" ||
+        roots.some(
+          (root) =>
+            e.path.startsWith(`${root}/`) &&
+            !e.path.slice(root.length + 1).includes("/")
+        )
+    )
+    .sort(
+      (a, b) =>
+        priority(a.path) - priority(b.path) ||
+        hash(a.path) - hash(b.path) ||
+        a.path.localeCompare(b.path)
+    )
+    .map((e) => e.path)
+    .slice(0, limit)
+}
+
+export function withinBudget(
+  entries: TreeEntry[],
+  paths: string[],
+  budget: number
+): string[] {
+  const sizes = new Map(entries.map((e) => [e.path, e.bytes]))
+  return [...new Set(paths)].filter((path) => {
+    const size = sizes.get(path)
+    if (size === undefined || size > budget) return false
+    budget -= size
+    return true
+  })
 }
 
 export function collect(
@@ -102,12 +181,11 @@ export function collect(
 
     if (isCodeFile(entry.path)) {
       codeFiles.push(
-        sampled.has(entry.path)
+        sampled.has(entry.path) && text !== undefined
           ? {
               path: entry.path,
               bytes: entry.bytes,
-              imports: extractImports(text ?? ""),
-              readsEnv: ENV_READ.test(text ?? ""),
+              ...sourceFacts(text, entry.path),
             }
           : { path: entry.path, bytes: entry.bytes, imports: null }
       )

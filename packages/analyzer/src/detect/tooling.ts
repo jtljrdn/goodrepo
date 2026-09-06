@@ -29,7 +29,11 @@ export function detectTooling(facts: RawFacts, library: boolean) {
       lintConfig: rootNames.some((name) =>
         LINT_CONFIGS.some((re) => re.test(name))
       ),
-      envExample: envTemplate ? true : readsEnv === false ? null : false,
+      envExample: envTemplate
+        ? true
+        : readsEnv === true || lower.has(".env")
+          ? false
+          : null,
       container: library
         ? null
         : CONTAINER_FILES.some((name) => lower.has(name)) ||

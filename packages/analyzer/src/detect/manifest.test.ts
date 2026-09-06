@@ -68,7 +68,7 @@ test("detects a pinned runtime from any of the accepted sources", () => {
   expect(
     detectManifest(
       facts(["package.json"], {
-        "package.json": pkg({ engines: { node: ">=20" } }),
+        "package.json": pkg({ engines: { node: "20.10.0" } }),
       })
     ).has.nodePinned
   ).toBe(true)
@@ -182,4 +182,31 @@ test("workspace roots come from package.json globs or a pnpm workspace file", ()
     detectManifest(facts(["package.json"], { "package.json": pkg({}) }))
       .workspaceRoots
   ).toEqual([])
+})
+
+test("open-ended runtime ranges and empty Volta settings are not pins", () => {
+  expect(
+    detectManifest(
+      facts(["package.json"], {
+        "package.json": pkg({ engines: { node: ">=18" }, volta: null }),
+      })
+    ).has.nodePinned
+  ).toBe(false)
+})
+
+test("a package manager pin must specify a version matching its lockfile", () => {
+  expect(
+    detectManifest(
+      facts(["package.json", "bun.lock"], {
+        "package.json": pkg({ packageManager: "pnpm@9.0.0" }),
+      })
+    ).has.lockfile
+  ).toBe(false)
+  expect(
+    detectManifest(
+      facts(["package.json", "bun.lock"], {
+        "package.json": pkg({ packageManager: "bun" }),
+      })
+    ).has.lockfile
+  ).toBe(false)
 })

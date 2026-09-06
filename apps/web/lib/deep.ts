@@ -31,7 +31,14 @@ async function reason(
   sha: string
 ): Promise<DeepReport> {
   const base = await scanAtSha(owner, repo, sha)
-  if (!base.ok) return { ...base, refused: null }
+  if (!base.ok) {
+    if (
+      base.failure.kind === "rate-limited" ||
+      base.failure.kind === "unavailable"
+    )
+      throw new Error(base.failure.message)
+    return { ...base, refused: null }
+  }
 
   const result = await deepScan(
     { owner, repo, revision: sha, token: process.env.GITHUB_TOKEN },
@@ -53,7 +60,7 @@ async function reason(
   }
 }
 
-const deepAtSha = cachedByCommit("deep", "v3", reason)
+const deepAtSha = cachedByCommit("deep", "v4", reason)
 
 export async function runDeepScan(
   owner: string,

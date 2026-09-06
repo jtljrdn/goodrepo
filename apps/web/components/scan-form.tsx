@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@workspace/ui/components/button"
 import { cn } from "@workspace/ui/lib/utils"
 import { parseRepoInput } from "@/lib/parse-repo"
+import { GridLoader } from "@/components/grid-loader"
 
-const DEFAULT_HINT = "Public repos need no sign in. No AI, no waiting."
+const DEFAULT_HINT = "Public repositories need no sign-in."
 
 export function ScanForm({
   className,
@@ -63,6 +64,7 @@ export function ScanForm({
           className="h-full min-w-0 flex-1 bg-transparent px-2 text-base outline-none placeholder:text-muted-foreground/60"
         />
         <Button type="submit" size="lg" disabled={pending} className="m-1 px-4">
+          {pending ? <GridLoader variant={deep ? "deep" : "scan"} className="text-xl" /> : null}
           {pending ? "Scanning" : deep ? "Deep scan" : "Scan"}
         </Button>
       </div>
@@ -74,8 +76,7 @@ export function ScanForm({
             onChange={(event) => setDeep(event.target.checked)}
             className="size-3.5 accent-foreground"
           />
-          Deep scan: an AI reads the code. Slower, and it uses one of your runs
-          for today.
+          Deep scan · uses one daily run
         </label>
       ) : null}
       {message ? (

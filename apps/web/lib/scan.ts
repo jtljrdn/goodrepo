@@ -1,5 +1,9 @@
 import {
   analyze,
+  CAPS,
+  ScanFetchError,
+  withinBudget,
+  workspacePaths,
   chooseConfigFiles,
   chooseSample,
   classifyRepo,
@@ -29,6 +33,12 @@ export function failureMessage(failure: ScanFailure): {
   detail: string
 } {
   switch (failure.kind) {
+    case "unavailable":
+      return {
+        title: "Try again shortly",
+        detail:
+          "GitHub could not finish reading this repository. Please try again shortly.",
+      }
     case "not-js":
       return {
         title: "Not scanned",
@@ -72,22 +82,52 @@ async function measure(
   sha: string,
   token: string | undefined
 ): Promise<ScanResult> {
-  const meta = await fetchRepoMeta(owner, repo, token)
+  const [meta, tree] = await Promise.all([
+    fetchRepoMeta(owner, repo, token),
+    fetchTree(owner, repo, sha, token),
+  ])
   if (isFailure(meta)) return reject(meta)
-
-  const tree = await fetchTree(owner, repo, sha, token)
   if (isFailure(tree)) return reject(tree)
+  if (tree.truncated)
+    return {
+      ok: false,
+      failure: {
+        kind: "too-large",
+        message: "GitHub truncated the repository tree.",
+      },
+    }
 
   const rejection = classifyRepo(tree.entries)
   if (rejection) return { ok: false, failure: rejection }
 
-  const configPaths = chooseConfigFiles(tree.entries)
-  const samplePaths = token ? chooseSample(tree.entries) : []
-  const wanted = [...configPaths, ...samplePaths]
-
-  const texts = token
-    ? await fetchBlobs(owner, repo, sha, wanted, token)
-    : await fetchBlobsRest(owner, repo, sha, configPaths)
+  const read = (paths: string[]) =>
+    token
+      ? fetchBlobs(owner, repo, sha, paths, token)
+      : fetchBlobsRest(owner, repo, sha, paths)
+  const initial = withinBudget(
+    tree.entries,
+    chooseConfigFiles(tree.entries).filter(
+      (path) => path === "package.json" || path === "pnpm-workspace.yaml"
+    ),
+    CAPS.scanBytes
+  )
+  const texts = await read(initial)
+  const roots = workspacePaths(tree.entries, texts)
+  const configPaths = chooseConfigFiles(tree.entries, texts)
+  const samplePaths = token
+    ? chooseSample(tree.entries, CAPS.importSample, roots)
+    : []
+  const readBytes = tree.entries.reduce(
+    (sum, entry) => sum + (texts.has(entry.path) ? entry.bytes : 0),
+    0
+  )
+  const wanted = withinBudget(
+    tree.entries,
+    [...configPaths, ...samplePaths].filter((path) => !texts.has(path)),
+    CAPS.scanBytes - readBytes
+  )
+  const additional = await read(wanted)
+  for (const [path, text] of additional) texts.set(path, text)
 
   const sampled = new Set(samplePaths.filter((path) => texts.has(path)))
 
@@ -118,12 +158,17 @@ function measurePublic(
   return measure(owner, repo, sha, process.env.GITHUB_TOKEN)
 }
 
-const cachedMeasure = cachedByCommit("scan", "v4", measurePublic)
+const cachedMeasure = cachedByCommit("scan", "v5", measurePublic)
 
 async function settle(run: Promise<ScanResult>): Promise<ScanResult> {
   try {
     return await run
   } catch (error) {
+    if (error instanceof ScanFetchError)
+      return {
+        ok: false,
+        failure: { kind: error.kind, message: error.message },
+      }
     if (isTransient(error)) {
       return {
         ok: false,
@@ -170,7 +215,13 @@ export async function resolveSha(
     return { kind: "not-found", message: "That is not a commit sha." }
   if (ref !== null && FULL_SHA.test(ref)) return ref
 
-  return fetchHeadSha(owner, repo, ref ?? "HEAD", token)
+  try {
+    return await fetchHeadSha(owner, repo, ref ?? "HEAD", token)
+  } catch (error) {
+    if (error instanceof ScanFetchError)
+      return { kind: error.kind, message: error.message }
+    throw error
+  }
 }
 
 export async function runScan(

@@ -142,7 +142,7 @@ export const CATEGORIES: CategoryDef[] = [
         "docArchitecture",
         15,
         "Architecture documented",
-        "Architecture section explains the main boundaries",
+        "Architecture section includes guidance",
         "Architecture undocumented"
       ),
       s(
@@ -177,8 +177,11 @@ export const CATEGORIES: CategoryDef[] = [
         "testScript",
         20,
         "test script",
-        (p) => `test script defined (${p.scripts.test ?? ""})`,
-        "No test script in package.json"
+        (p) =>
+          p.scripts.test
+            ? `test script defined (${p.scripts.test})`
+            : "Test scripts defined in workspace packages",
+        "A usable test script is missing in package.json or a tested workspace"
       ),
       s(
         "testConfig",
@@ -212,7 +215,7 @@ export const CATEGORIES: CategoryDef[] = [
         "ciRunsTests",
         10,
         "CI runs the tests",
-        "CI runs the test suite",
+        "CI is configured to run the test suite",
         "CI does not run the test suite"
       ),
       s(
@@ -234,9 +237,9 @@ export const CATEGORIES: CategoryDef[] = [
         20,
         "One validation approach",
         (p) =>
-          `One validation approach across routes (${p.validationPatterns[0]})`,
+          `Validation usage is consistent within inspected packages (${p.validationPatterns.join(", ")})`,
         (p) =>
-          `Mixed validation approaches (${[...new Set(p.validationPatterns)].join(", ")})`
+          `Mixed validation libraries in sampled source (${[...new Set(p.validationPatterns)].join(", ")})`
       ),
       s(
         "consistentRouteShape",
@@ -256,8 +259,8 @@ export const CATEGORIES: CategoryDef[] = [
         "singleDataLayer",
         15,
         "Data access through one layer",
-        "Data access goes through one layer",
-        "Data access is spread across components and routes"
+        "Sampled UI code rarely imports a database library directly",
+        "Sampled UI code imports database libraries directly"
       ),
       s(
         "consistentErrors",
@@ -371,8 +374,8 @@ export const CATEGORIES: CategoryDef[] = [
         "lowFanout",
         20,
         "Change fan-out across modules",
-        "A typical file reaches into few other folders",
-        "A typical file reaches into many other folders, so one change means reading many of them"
+        "Sampled source has low import fan-out within each inspected package",
+        "Sampled source reaches into many folders in at least one package"
       ),
     ],
   },
@@ -424,9 +427,11 @@ export function scoreCategory(
     if (value === null || value === undefined) {
       const reason = answered.has(sig.id)
         ? "nothing like this in the repository"
-        : DEEP_SCAN_ONLY.has(sig.id)
-          ? "needs a deep scan"
-          : "does not apply here"
+        : p.unmeasured?.[sig.id] === "not-inspected"
+          ? "not inspected within this scan’s limits"
+          : DEEP_SCAN_ONLY.has(sig.id)
+            ? "needs a deep scan"
+            : "does not apply here"
       return {
         id: sig.id,
         points: sig.points,

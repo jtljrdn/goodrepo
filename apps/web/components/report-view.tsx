@@ -11,6 +11,8 @@ import {
 } from "@/components/report"
 import type { RepoProfile, SignalVerdict } from "@/lib/profile"
 import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import { CopyButton } from "@/components/copy-button"
+import { buildAgentInstructions } from "@/lib/agent-instructions"
 import { recommend } from "@/lib/recommendations"
 import { shaQuery } from "@/lib/scan"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
@@ -34,7 +36,7 @@ export function ReportShell({
   return (
     <>
       <SiteHeader>
-        <span className="hidden sm:inline">
+        <span className="hidden max-w-48 truncate sm:inline lg:max-w-72">
           {owner}/{repo}
         </span>
         {sha ? (
@@ -95,6 +97,8 @@ export function ReportView({
   const measured = signals.filter(
     (signal) => signal.status !== "not-measured"
   ).length
+  const failed = signals.filter(signal => signal.status === "fail").length
+  const instructions = buildAgentInstructions({profile, overall, categories, sha, kind: !deepAvailable ? "private" : ran ? "deep" : "static", verdicts: ran?.verdicts ?? []})
   const pending = ran
     ? 0
     : signals.filter(
@@ -104,62 +108,77 @@ export function ReportView({
 
   return (
     <>
-      <ReportHeadline profile={profile} overall={overall} />
+      <ReportHeadline
+        profile={profile}
+        overall={overall}
+        actions={
+          <>
+            <CopyButton
+              value={instructions}
+              label="Copy instructions for agent"
+              text="Copy instructions for agent"
+              manualFallback
+              className="min-h-11"
+            />
+            {ran ? (
+              <Link href={`/${profile.owner}/${profile.repo}${query}`} className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring">View quick scan</Link>
+            ) : pending > 0 && deepAvailable && DEEP_SCAN_ENABLED ? (
+              <Link
+                href={`/${profile.owner}/${profile.repo}/deep${query}`}
+                prefetch={false}
+                rel="nofollow"
+                className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
+              >
+                Run deep scan
+              </Link>
+            ) : null}
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-border/60 py-3 text-xs">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-xs">
         <span className="text-muted-foreground">
-          {ran ? "Deep scan · an AI read the code" : "Quick scan · no AI"}
+          {ran ? "Deep scan" : "Quick scan"}
         </span>
-        <span className="ml-auto text-muted-foreground">
-          {measured} checks run
+        <span className="text-muted-foreground">
+          {measured} checks
           {pending > 0 ? ` · ${pending} need a deep scan` : ""}
         </span>
-        {pending > 0 && deepAvailable && DEEP_SCAN_ENABLED ? (
-          <Link
-            href={`/${profile.owner}/${profile.repo}/deep${query}`}
-            prefetch={false}
-            rel="nofollow"
-            className="text-foreground underline-offset-4 hover:underline"
-          >
-            Run one, free with a GitHub sign-in
-          </Link>
-        ) : null}
       </div>
+
+      <details className="mt-1 mb-4 text-xs text-muted-foreground">
+        <summary className="w-fit cursor-pointer py-3 underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring">Scan coverage</summary>
+        <p className="max-w-prose pb-2 leading-relaxed">
+          {profile.sample ? `${profile.sample.sampled} of ${profile.sample.total} source files inspected.` : "Source contents were not sampled."}
+          {profile.configCoverage ? ` ${profile.configCoverage.read} of ${profile.configCoverage.total} configs and instructions read.` : ""}
+          {" "}Unmeasured checks are excluded from scores.
+        </p>
+      </details>
 
       {deep?.unfinished ? (
         <p className="mt-4 border border-warn/40 px-3 py-2 text-xs text-warn">
-          The deep scan did not finish, so this is the quick scan.{" "}
+          Deep scan incomplete. Showing the quick scan.{" "}
           {deep.unfinished}
         </p>
       ) : null}
 
       {profile.truncated ? (
         <p className="mt-4 border border-warn/40 px-3 py-2 text-xs text-warn">
-          Partial scan. GitHub only listed part of this repository, so the score
-          covers what could be read.
+          Partial scan: scores cover only the files GitHub returned.
         </p>
       ) : null}
 
-      <Section
-        title="Scores"
-        hint="The overall score is the average of these six"
-      >
+      <Section title="Scores">
         <CategorySummary categories={categories} />
       </Section>
 
       {ran && ran.verdicts.length > 0 ? (
-        <Section
-          title="What the AI found"
-          hint="Already counted in the scores above"
-        >
+        <Section title="Deep scan findings">
           <DeepVerdicts verdicts={ran.verdicts} profile={profile} />
         </Section>
       ) : null}
 
-      <Section
-        title="How each score was earned"
-        hint="Open a category to see every check"
-      >
+      <Section title="Checks">
         <div className="border-t border-border/60">
           {categories.map((category) => (
             <CategoryDetail key={category.key} category={category} />
@@ -167,7 +186,10 @@ export function ReportView({
         </div>
       </Section>
 
-      <Section title="What to fix" hint="Biggest wins first">
+      <Section
+        title="What to fix"
+        action={<CopyButton value={instructions} label="Copy instructions for agent" text="Copy instructions for agent" manualFallback className="min-h-9" />}
+      >
         {recommendations.length > 0 ? (
           <ul>
             {recommendations.map((recommendation, index) => (
@@ -181,62 +203,11 @@ export function ReportView({
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Nothing to fix. This repository is already easy for agents to work
-            in.
+            {failed > 0 ? `${failed} failed checks. Copy the instructions for a complete fix list.` : "No failed checks in this scan."}
           </p>
         )}
       </Section>
 
-      <Section
-        title="Go deeper"
-        hint={
-          !deepAvailable
-            ? "Public repositories only"
-            : ran
-              ? "Deep scan included"
-              : DEEP_SCAN_ENABLED
-                ? "Not run yet"
-                : "Not available yet"
-        }
-      >
-        <div className="grid gap-px sm:max-w-md">
-          <div className="border border-border/60 p-5">
-            <h3 className="text-sm font-medium">Deep scan</h3>
-            <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
-              {!deepAvailable
-                ? "Deep scans use GoodRepo's own GitHub access, which cannot see private repositories. This report is the quick scan."
-                : ran
-                  ? "An AI read the code at this commit and answered the checks the quick scan could not. Opening this report again is free."
-                  : `An AI reads the code to settle the ${pending > 0 ? pending : "few"} checks a quick scan cannot. Takes about a minute and is free with a GitHub sign-in.`}
-            </p>
-            {!deepAvailable ? (
-              <Button variant="outline" size="sm" className="mt-4" disabled>
-                Public repositories only
-              </Button>
-            ) : !DEEP_SCAN_ENABLED ? (
-              <Button variant="outline" size="sm" className="mt-4" disabled>
-                Not available yet
-              </Button>
-            ) : ran ? (
-              <Link href={`/${profile.owner}/${profile.repo}${query}`}>
-                <Button variant="outline" size="sm" className="mt-4">
-                  Back to the quick scan
-                </Button>
-              </Link>
-            ) : (
-              <Link
-                href={`/${profile.owner}/${profile.repo}/deep${query}`}
-                prefetch={false}
-                rel="nofollow"
-              >
-                <Button variant="outline" size="sm" className="mt-4">
-                  {deep ? "Try the deep scan again" : "Run deep scan"}
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </Section>
     </>
   )
 }

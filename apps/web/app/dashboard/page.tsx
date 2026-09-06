@@ -129,17 +129,17 @@ async function History() {
         <Stat
           label="Repositories"
           value={String(usage.repos)}
-          hint="Distinct repositories you have scanned"
+          hint="Unique repositories"
         />
         <Stat
           label="Scans"
           value={String(usage.scans)}
-          hint="One per repository, commit and scan kind"
+          hint="Repository, commit and scan kind"
         />
         <Stat
           label="Average score"
           value={usage.averageScore === null ? "–" : String(usage.averageScore)}
-          hint="Across every repository you have scanned"
+          hint="Across scanned repositories"
         />
         <Stat
           label="Deep scans"
@@ -150,8 +150,8 @@ async function History() {
           }
           hint={
             deepUsed === null
-              ? "Deep scans are not switched on yet"
-              : `Left today, out of ${DAILY_RUNS_PER_ACCOUNT}. The count is a rolling 24 hours.`
+              ? "Unavailable"
+              : `${DAILY_RUNS_PER_ACCOUNT} per rolling 24 hours`
           }
         />
       </div>
@@ -165,8 +165,7 @@ async function History() {
           <div className="border border-border/60 p-8">
             <p className="text-sm font-medium">Nothing scanned yet</p>
             <p className="mt-3 max-w-prose font-sans text-sm leading-relaxed text-muted-foreground">
-              Scan a repository above and it will show up here. Or open one of
-              these to see what a report looks like.
+              Scan a repository or try an example.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-2 text-xs">
               {EXAMPLES.map((example) => (
@@ -247,10 +246,6 @@ export default function DashboardPage() {
           <h1 className="text-2xl leading-tight font-medium tracking-tight">
             Your scans
           </h1>
-          <p className="mt-3 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
-            Every report you open is kept here, so you can come back to a
-            repository without pasting its link again.
-          </p>
           <div className="mt-8 max-w-2xl">
             <ScanForm hint={null} deepOption={DEEP_SCAN_ENABLED} />
           </div>

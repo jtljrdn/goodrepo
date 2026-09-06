@@ -69,6 +69,7 @@ export type CodeFileFacts = {
   bytes: number
   imports: string[] | null
   readsEnv?: boolean
+  client?: boolean
 }
 
 export type SampleInfo = { sampled: number; total: number }
@@ -82,6 +83,8 @@ export type RawFacts = {
 }
 
 export type RepoProfile = RepoMeta & {
+  unmeasured?: Partial<Record<SignalId, "not-inspected" | "not-applicable">>
+  configCoverage?: { read: number; total: number }
   framework: string
   language: string
   files: number
