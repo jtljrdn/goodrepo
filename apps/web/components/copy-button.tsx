@@ -20,12 +20,14 @@ export function CopyButton({
   text = "Copy",
   manualFallback = false,
   className,
+  disabled = false,
 }: {
   value: string
   label: string
   text?: string
   manualFallback?: boolean
   className?: string
+  disabled?: boolean
 }) {
   const [state, setState] = React.useState<CopyState>("idle")
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -38,7 +40,13 @@ export function CopyButton({
       setState("error")
     }
     if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setState(current => current === "error" && manualFallback ? current : "idle"), 2000)
+    timer.current = setTimeout(
+      () =>
+        setState((current) =>
+          current === "error" && manualFallback ? current : "idle"
+        ),
+      2000
+    )
   }
 
   const button = (
@@ -47,6 +55,7 @@ export function CopyButton({
       variant="outline"
       size="sm"
       onClick={copy}
+      disabled={disabled}
       aria-label={label}
       className={cn(
         "shrink-0",
@@ -81,7 +90,7 @@ export function CopyButton({
             <textarea
               readOnly
               value={value}
-              onFocus={event => event.currentTarget.select()}
+              onFocus={(event) => event.currentTarget.select()}
               rows={8}
               className="mt-2 block w-full border border-input bg-background p-3 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
