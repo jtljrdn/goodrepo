@@ -1,9 +1,8 @@
 import { notFound, redirect } from "next/navigation"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
-import { LogScan } from "@/components/log-scan"
 import { verifiedSession } from "@/lib/auth"
 import { runDeepScan } from "@/lib/deep"
-import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import { deepScan } from "@/lib/flags"
 import {
   DAILY_RUNS_PER_ACCOUNT,
   MONTHLY_RUNS_TOTAL,
@@ -37,7 +36,7 @@ export async function generateMetadata(
 export default async function DeepReportPage(
   props: PageProps<"/[owner]/[repo]/deep">
 ) {
-  if (!DEEP_SCAN_ENABLED) notFound()
+  if (!(await deepScan())) notFound()
 
   const { owner, repo } = await props.params
   const ref = readSha((await props.searchParams).sha)
@@ -69,13 +68,6 @@ export default async function DeepReportPage(
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
-      <LogScan
-        owner={result.profile.owner}
-        repo={result.profile.repo}
-        commitSha={result.profile.commitSha}
-        kind="deep"
-        score={result.overall}
-      />
       <ReportView
         profile={result.profile}
         overall={result.overall}

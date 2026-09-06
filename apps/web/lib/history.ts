@@ -1,8 +1,10 @@
 import { pool } from "@/lib/db"
+import { parseSnapshotPayload, type QuickScanMode } from "@/lib/scan-snapshot"
 
 export type ScanKind = "fast" | "deep" | "private"
 
 export type ScannedRepo = {
+  repositoryId: string | null
   owner: string
   repo: string
   commitSha: string
@@ -58,6 +60,7 @@ type HistoryRow = {
 // read the same rows. One query, not two.
 export async function historyFor(
   userId: string,
+  improvementWorkflowEnabled: boolean,
   limit = 50
 ): Promise<{ usage: Usage; repos: ScannedRepo[] }> {
   const { rows } = await pool.query<HistoryRow>(
@@ -91,7 +94,7 @@ export async function historyFor(
   )
 
   const first = rows[0]
-  return {
+  const legacy = {
     usage: {
       repos: Number(first?.repo_count ?? 0),
       scans: Number(first?.scan_count ?? 0),
@@ -107,6 +110,7 @@ export async function historyFor(
         ? []
         : [
             {
+              repositoryId: null,
               owner: row.owner,
               repo: row.repo,
               commitSha: row.commit_sha,
@@ -116,5 +120,59 @@ export async function historyFor(
             },
           ]
     ),
+  }
+
+  if (!improvementWorkflowEnabled) return legacy
+  try {
+    const snapshots = await pool.query<{
+      repository_id: string
+      owner: string
+      repo: string
+      commit_sha: string
+      mode: QuickScanMode
+      payload: unknown
+      observed_at: Date
+    }>(
+      `select distinct on (repository_id)
+         repository_id, owner, repo, commit_sha, mode, payload, observed_at
+       from goodrepo.scan_snapshot
+       where user_id = $1
+       order by repository_id, observed_at desc
+       limit $2`,
+      [userId, limit]
+    )
+    const preferred: ScannedRepo[] = snapshots.rows.flatMap((row) => {
+      const payload = parseSnapshotPayload(row.payload)
+      return payload
+        ? [
+            {
+              repositoryId: row.repository_id,
+              owner: row.owner,
+              repo: row.repo,
+              commitSha: row.commit_sha,
+              kind: row.mode === "private" ? "private" : "fast",
+              score: payload.overall,
+              scannedAt: row.observed_at,
+            },
+          ]
+        : []
+    })
+    const names = new Set(
+      preferred.map((row) => `${row.owner}/${row.repo}`.toLowerCase())
+    )
+    return {
+      usage: legacy.usage,
+      repos: [
+        ...preferred,
+        ...legacy.repos.filter(
+          (row) => !names.has(`${row.owner}/${row.repo}`.toLowerCase())
+        ),
+      ]
+        .sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime())
+        .slice(0, limit),
+    }
+  } catch (error) {
+    console.warn("Could not read snapshot-backed history.", error)
+    return legacy
   }
 }

@@ -1,4 +1,6 @@
+import { Suspense } from "react"
 import Link from "next/link"
+import { evaluate } from "flags/next"
 import { Button } from "@workspace/ui/components/button"
 import { SiteHeader } from "@/components/site-header"
 import {
@@ -9,13 +11,15 @@ import {
   ReportHeadline,
   Section,
 } from "@/components/report"
-import type { RepoProfile, SignalVerdict } from "@/lib/profile"
-import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import type { RepoProfile, SignalId, SignalVerdict } from "@/lib/profile"
+import { deepScan, improvementWorkflow } from "@/lib/flags"
 import { CopyButton } from "@/components/copy-button"
-import { buildAgentInstructions } from "@/lib/agent-instructions"
+import { buildAgentInstructions, guidanceFor } from "@/lib/agent-instructions"
 import { recommend } from "@/lib/recommendations"
 import { shaQuery } from "@/lib/scan"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
+import { FixSelector, type FixChoice } from "@/components/fix-selector"
+import { ReportHistory } from "@/components/report-history"
 
 export type DeepDetail = {
   verdicts: SignalVerdict[]
@@ -41,7 +45,7 @@ export function ReportShell({
         </span>
         {sha ? (
           <span className="hidden border border-border px-1.5 py-px sm:inline">
-            @{sha}
+            @{sha.slice(0, 7)}
           </span>
         ) : null}
         <Link href="/">
@@ -75,13 +79,15 @@ export function FailureCard({
   )
 }
 
-export function ReportView({
+export async function ReportView({
   profile,
   overall,
   categories,
   deep = null,
   sha = null,
   deepAvailable = true,
+  mode = "public",
+  initialSelected = [],
 }: {
   profile: RepoProfile
   overall: number | null
@@ -89,7 +95,13 @@ export function ReportView({
   deep?: DeepDetail | null
   sha?: string | null
   deepAvailable?: boolean
+  mode?: "public" | "private"
+  initialSelected?: SignalId[]
 }) {
+  const { deepScanEnabled, improvementWorkflowEnabled } = await evaluate({
+    deepScanEnabled: deepScan,
+    improvementWorkflowEnabled: improvementWorkflow,
+  })
   const query = shaQuery(sha)
   const recommendations = recommend(profile, categories)
   const ran = deep !== null && deep.unfinished === null ? deep : null
@@ -97,8 +109,39 @@ export function ReportView({
   const measured = signals.filter(
     (signal) => signal.status !== "not-measured"
   ).length
-  const failed = signals.filter(signal => signal.status === "fail").length
-  const instructions = buildAgentInstructions({profile, overall, categories, sha, kind: !deepAvailable ? "private" : ran ? "deep" : "static", verdicts: ran?.verdicts ?? []})
+  const failed = signals.filter((signal) => signal.status === "fail").length
+  const instructions = buildAgentInstructions({
+    profile,
+    overall,
+    categories,
+    sha,
+    kind: !deepAvailable ? "private" : ran ? "deep" : "static",
+    verdicts: ran?.verdicts ?? [],
+  })
+  const recommendationsById = new Map(
+    recommendations.map((recommendation) => [recommendation.id, recommendation])
+  )
+  const choices: FixChoice[] = categories.flatMap((category) =>
+    category.signals.flatMap((signal) => {
+      if (signal.status !== "fail") return []
+      const recommendation = recommendationsById.get(signal.id)
+      return [
+        {
+          id: signal.id,
+          category: category.name,
+          finding: signal.text,
+          measurement: signal.measurement
+            ? JSON.stringify(signal.measurement)
+            : null,
+          title: recommendation?.title ?? signal.text,
+          impact: recommendation?.impact ?? null,
+          suggestedFix: recommendation
+            ? [recommendation.fix, ...recommendation.bullets]
+            : [guidanceFor(signal.id)],
+        },
+      ]
+    })
+  )
   const pending = ran
     ? 0
     : signals.filter(
@@ -113,16 +156,32 @@ export function ReportView({
         overall={overall}
         actions={
           <>
+            {improvementWorkflowEnabled && !ran && choices.length > 0 ? (
+              <a href="#choose-fixes">
+                <Button size="sm" className="min-h-11">
+                  Choose fixes
+                </Button>
+              </a>
+            ) : null}
             <CopyButton
               value={instructions}
-              label="Copy instructions for agent"
-              text="Copy instructions for agent"
+              label="Copy all instructions"
+              text={
+                improvementWorkflowEnabled
+                  ? "Copy all instructions"
+                  : "Copy instructions for agent"
+              }
               manualFallback
               className="min-h-11"
             />
             {ran ? (
-              <Link href={`/${profile.owner}/${profile.repo}${query}`} className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring">View quick scan</Link>
-            ) : pending > 0 && deepAvailable && DEEP_SCAN_ENABLED ? (
+              <Link
+                href={`/${profile.owner}/${profile.repo}${query}${query ? "&" : "?"}choose=1`}
+                className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
+              >
+                Choose fixes in quick report
+              </Link>
+            ) : pending > 0 && deepAvailable && deepScanEnabled ? (
               <Link
                 href={`/${profile.owner}/${profile.repo}/deep${query}`}
                 prefetch={false}
@@ -147,18 +206,23 @@ export function ReportView({
       </div>
 
       <details className="mt-1 mb-4 text-xs text-muted-foreground">
-        <summary className="w-fit cursor-pointer py-3 underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring">Scan coverage</summary>
+        <summary className="w-fit cursor-pointer py-3 underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring">
+          Scan coverage
+        </summary>
         <p className="max-w-prose pb-2 leading-relaxed">
-          {profile.sample ? `${profile.sample.sampled} of ${profile.sample.total} source files inspected.` : "Source contents were not sampled."}
-          {profile.configCoverage ? ` ${profile.configCoverage.read} of ${profile.configCoverage.total} configs and instructions read.` : ""}
-          {" "}Unmeasured checks are excluded from scores.
+          {profile.sample
+            ? `${profile.sample.sampled} of ${profile.sample.total} source files inspected.`
+            : "Source contents were not sampled."}
+          {profile.configCoverage
+            ? ` ${profile.configCoverage.read} of ${profile.configCoverage.total} configs and instructions read.`
+            : ""}{" "}
+          Unmeasured checks are excluded from scores.
         </p>
       </details>
 
       {deep?.unfinished ? (
         <p className="mt-4 border border-warn/40 px-3 py-2 text-xs text-warn">
-          Deep scan incomplete. Showing the quick scan.{" "}
-          {deep.unfinished}
+          Deep scan incomplete. Showing the quick scan. {deep.unfinished}
         </p>
       ) : null}
 
@@ -167,6 +231,17 @@ export function ReportView({
           Partial scan: scores cover only the files GitHub returned.
         </p>
       ) : null}
+
+      <Suspense fallback={null}>
+        <ReportHistory
+          profile={profile}
+          overall={overall}
+          categories={categories}
+          kind={ran ? "deep" : mode === "private" ? "private" : "fast"}
+          mode={mode}
+          improvementWorkflowEnabled={improvementWorkflowEnabled}
+        />
+      </Suspense>
 
       <Section title="Scores">
         <CategorySummary categories={categories} />
@@ -188,9 +263,30 @@ export function ReportView({
 
       <Section
         title="What to fix"
-        action={<CopyButton value={instructions} label="Copy instructions for agent" text="Copy instructions for agent" manualFallback className="min-h-9" />}
+        action={
+          improvementWorkflowEnabled && !ran ? null : (
+            <CopyButton
+              value={instructions}
+              label="Copy instructions for agent"
+              text="Copy instructions for agent"
+              manualFallback
+              className="min-h-9"
+            />
+          )
+        }
       >
-        {recommendations.length > 0 ? (
+        {improvementWorkflowEnabled && !ran && choices.length > 0 ? (
+          <FixSelector
+            repository={{
+              owner: profile.owner,
+              repo: profile.repo,
+              commitSha: profile.commitSha,
+            }}
+            mode={mode}
+            choices={choices}
+            initialSelected={initialSelected}
+          />
+        ) : recommendations.length > 0 ? (
           <ul>
             {recommendations.map((recommendation, index) => (
               <RecommendationItem
@@ -203,11 +299,12 @@ export function ReportView({
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            {failed > 0 ? `${failed} failed checks. Copy the instructions for a complete fix list.` : "No failed checks in this scan."}
+            {failed > 0
+              ? `${failed} failed checks. Copy the instructions for a complete fix list.`
+              : "No failed checks in this scan."}
           </p>
         )}
       </Section>
-
     </>
   )
 }

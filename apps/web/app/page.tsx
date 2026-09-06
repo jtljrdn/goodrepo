@@ -6,13 +6,14 @@ import { HeroBackdrop } from "@/components/hero-backdrop"
 import { CopyButton } from "@/components/copy-button"
 import { CATEGORIES } from "@/lib/score"
 import { EXAMPLES, exampleHref } from "@/lib/examples"
-import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import { deepScan } from "@/lib/flags"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 
 const INSTALL_COMMAND = "npx skills add jtljrdn/goodrepo"
 
 async function SignInNudge() {
   if (!GITHUB_SIGN_IN_ENABLED || (await currentSession())) return null
+  const deepScanEnabled = await deepScan()
   return (
     <p className="mt-6 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
       <Link
@@ -22,8 +23,7 @@ async function SignInNudge() {
         Sign in with GitHub
       </Link>{" "}
       to scan private repositories
-      {DEEP_SCAN_ENABLED ? " or run a deep scan" : ""}
-      .
+      {deepScanEnabled ? " or run a deep scan" : ""}.
     </p>
   )
 }
@@ -42,8 +42,9 @@ export default function Page() {
             How easy is your codebase for AI agents to work in?
           </h1>
           <p className="mt-5 max-w-xl font-sans text-sm leading-relaxed text-muted-foreground">
-            Scan a GitHub repository for agent readiness using a combination of LLM and codebase analysis.
-            Get a score out of 100 and a list of fixes.
+            Scan a GitHub repository for agent readiness using a combination of
+            LLM and codebase analysis. Get a score out of 100 and a list of
+            fixes.
           </p>
           <div className="mt-8 max-w-2xl">
             <ScanForm />
@@ -100,7 +101,6 @@ export default function Page() {
                 <p className="mt-2 font-sans text-sm leading-relaxed text-muted-foreground">
                   {category.question}
                 </p>
-
               </li>
             ))}
           </ul>

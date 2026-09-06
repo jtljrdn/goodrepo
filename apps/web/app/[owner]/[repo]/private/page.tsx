@@ -2,7 +2,6 @@ import { redirect } from "next/navigation"
 import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
 import { ReconnectGitHub } from "@/components/reconnect-github"
-import { LogScan } from "@/components/log-scan"
 import {
   currentSession,
   githubToken,
@@ -10,6 +9,7 @@ import {
   GITHUB_SIGN_IN_ENABLED,
 } from "@/lib/auth"
 import { failureMessage, readSha, runPrivateScan, shaQuery } from "@/lib/scan"
+import { readSelectedQuery } from "@/lib/fix-input"
 
 export const maxDuration = 300
 
@@ -38,7 +38,9 @@ export default async function PrivateReportPage(
   props: PageProps<"/[owner]/[repo]/private">
 ) {
   const { owner, repo } = await props.params
-  const ref = readSha((await props.searchParams).sha)
+  const search = await props.searchParams
+  const ref = readSha(search.sha)
+  const initialSelected = readSelectedQuery(search.fixes)
   const query = shaQuery(ref)
   const here = `/${owner}/${repo}/private${query}`
 
@@ -85,19 +87,14 @@ export default async function PrivateReportPage(
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
-      <LogScan
-        owner={result.profile.owner}
-        repo={result.profile.repo}
-        commitSha={result.profile.commitSha}
-        kind="private"
-        score={result.overall}
-      />
       <ReportView
         profile={result.profile}
         overall={result.overall}
         categories={result.categories}
         sha={ref}
         deepAvailable={false}
+        mode="private"
+        initialSelected={initialSelected}
       />
     </ReportShell>
   )

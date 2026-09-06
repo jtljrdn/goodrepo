@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { ReportShell, ReportView, FailureCard } from "@/components/report-view"
-import { LogScan } from "@/components/log-scan"
 import { alt } from "@/app/opengraph-image"
 import { failureMessage, readSha, runScan, shaQuery } from "@/lib/scan"
+import { readSelectedQuery } from "@/lib/fix-input"
 
 export const maxDuration = 300
 
@@ -33,7 +33,9 @@ export async function generateMetadata(props: PageProps<"/[owner]/[repo]">) {
 
 export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
   const { owner, repo } = await props.params
-  const ref = readSha((await props.searchParams).sha)
+  const search = await props.searchParams
+  const ref = readSha(search.sha)
+  const initialSelected = readSelectedQuery(search.fixes)
   const result = await runScan(owner, repo, ref)
 
   if (!result.ok) {
@@ -64,18 +66,12 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
       repo={result.profile.repo}
       sha={result.profile.commitSha}
     >
-      <LogScan
-        owner={result.profile.owner}
-        repo={result.profile.repo}
-        commitSha={result.profile.commitSha}
-        kind="fast"
-        score={result.overall}
-      />
       <ReportView
         profile={result.profile}
         overall={result.overall}
         categories={result.categories}
         sha={ref}
+        initialSelected={initialSelected}
       />
     </ReportShell>
   )

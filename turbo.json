@@ -27,9 +27,10 @@
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
-        "GOODREPO_DEEP_SCAN",
+        "FLAGS_SECRET",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "NODE_ENV",
         "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL",
         "SUPABASE_DATABASE_PASSWORD"
@@ -48,9 +49,10 @@
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
-        "GOODREPO_DEEP_SCAN",
+        "FLAGS_SECRET",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "NODE_ENV",
         "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
@@ -82,9 +84,10 @@
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_TOKEN",
-        "GOODREPO_DEEP_SCAN",
+        "FLAGS_SECRET",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "NODE_ENV",
         "VERCEL_OIDC_TOKEN",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]

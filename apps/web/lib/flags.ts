@@ -1,8 +1,6 @@
 import { vercelAdapter } from "@flags-sdk/vercel"
 import { flag } from "flags/next"
 
-export const DEEP_SCAN_ENABLED = process.env.GOODREPO_DEEP_SCAN === "1"
-
 export const deepScan = flag<boolean>({
   key: "deep-scan",
   description: "whether or not deep scans are enabled",

@@ -1,11 +1,13 @@
 import { Suspense } from "react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { evaluate } from "flags/next"
 import { SiteHeader } from "@/components/site-header"
 import { ScanForm } from "@/components/scan-form"
 import { currentSession, GITHUB_SIGN_IN_ENABLED } from "@/lib/auth"
 import { EXAMPLES, exampleHref } from "@/lib/examples"
-import { DEEP_SCAN_ENABLED } from "@/lib/flags"
+import { deepScan, improvementWorkflow } from "@/lib/flags"
+import { activePlanSummary } from "@/lib/fix-plans"
 import { historyFor, type ScanKind } from "@/lib/history"
 import {
   DAILY_RUNS_PER_ACCOUNT,
@@ -39,7 +41,7 @@ const REPORT_PATH: Record<ScanKind, string> = {
 }
 
 const TILE = "border border-border/60 p-5"
-const GRID = "grid gap-px sm:grid-cols-2 lg:grid-cols-4"
+const GRID = "grid gap-px sm:grid-cols-2 lg:grid-cols-5"
 
 function Stat({
   label,
@@ -71,7 +73,7 @@ function Skeleton() {
   return (
     <div aria-hidden>
       <div className={GRID}>
-        {[0, 1, 2, 3].map((tile) => (
+        {[0, 1, 2, 3, 4].map((tile) => (
           <div key={tile} className={TILE}>
             <Bar className="h-3 w-20" />
             <Bar className="mt-3 h-6 w-10" />
@@ -115,12 +117,25 @@ async function History() {
   if (!session) redirect("/home")
 
   const userId = session.user.id
+  const { deepScanEnabled, improvementWorkflowEnabled } = await evaluate({
+    deepScanEnabled: deepScan,
+    improvementWorkflowEnabled: improvementWorkflow,
+  })
   // A missing deep-scan count costs one tile; letting it throw costs the page.
-  const [{ usage, repos }, deepUsed] = await Promise.all([
-    historyFor(userId),
-    DEEP_SCAN_ENABLED
+  const [{ usage, repos }, deepUsed, plans] = await Promise.all([
+    historyFor(userId, improvementWorkflowEnabled),
+    deepScanEnabled
       ? deepRunsToday(userId).catch(() => null)
       : Promise.resolve(null),
+    improvementWorkflowEnabled
+      ? activePlanSummary(userId).catch(() => ({
+          count: 0,
+          byRepository: new Map<string, { id: string; selected: number }>(),
+        }))
+      : Promise.resolve({
+          count: 0,
+          byRepository: new Map<string, { id: string; selected: number }>(),
+        }),
   ])
 
   return (
@@ -143,16 +158,17 @@ async function History() {
         />
         <Stat
           label="Deep scans"
-          value={
-            deepUsed === null
-              ? "Off"
-              : String(deepScansLeft(deepUsed))
-          }
+          value={deepUsed === null ? "Off" : String(deepScansLeft(deepUsed))}
           hint={
             deepUsed === null
               ? "Unavailable"
               : `${DAILY_RUNS_PER_ACCOUNT} per rolling 24 hours`
           }
+        />
+        <Stat
+          label="Active plans"
+          value={improvementWorkflowEnabled ? String(plans.count) : "Off"}
+          hint="Saved improvement scopes"
         />
       </div>
 
@@ -205,12 +221,12 @@ async function History() {
                       {entry.owner}/{entry.repo}
                     </span>
                     <span className="mt-1 block text-[11px] text-muted-foreground/70">
-                      {KIND_LABEL[entry.kind]} · @{entry.commitSha} ·{" "}
-                      {relativeDays(entry.scannedAt)}
+                      {KIND_LABEL[entry.kind]} · @{entry.commitSha.slice(0, 7)}{" "}
+                      · {relativeDays(entry.scannedAt)}
                     </span>
                   </span>
                 </Link>
-                {DEEP_SCAN_ENABLED && entry.kind === "fast" ? (
+                {deepScanEnabled && entry.kind === "fast" ? (
                   <Link
                     href={`/${entry.owner}/${entry.repo}/deep?sha=${entry.commitSha}`}
                     prefetch={false}
@@ -220,6 +236,18 @@ async function History() {
                     Deep scan
                   </Link>
                 ) : null}
+                {entry.repositoryId &&
+                plans.byRepository.get(entry.repositoryId) ? (
+                  <Link
+                    href={`/fixes/${plans.byRepository.get(entry.repositoryId)!.id}`}
+                    prefetch={false}
+                    rel="nofollow"
+                    className="ml-2 shrink-0 border border-border/60 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                  >
+                    Resume{" "}
+                    {plans.byRepository.get(entry.repositoryId)!.selected} fixes
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -227,6 +255,10 @@ async function History() {
       </div>
     </>
   )
+}
+
+async function DashboardScanForm() {
+  return <ScanForm hint={null} deepOption={await deepScan()} />
 }
 
 export default function DashboardPage() {
@@ -247,7 +279,9 @@ export default function DashboardPage() {
             Your scans
           </h1>
           <div className="mt-8 max-w-2xl">
-            <ScanForm hint={null} deepOption={DEEP_SCAN_ENABLED} />
+            <Suspense fallback={<ScanForm hint={null} />}>
+              <DashboardScanForm />
+            </Suspense>
           </div>
         </section>
 
