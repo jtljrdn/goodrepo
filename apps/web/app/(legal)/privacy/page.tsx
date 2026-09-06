@@ -57,10 +57,23 @@ export default function PrivacyPage() {
       <h2>Private repository scans</h2>
       <p>
         A private scan reads the repository using your own token, at the moment
-        you ask for it. The result is <strong>never cached</strong> and never
-        written to disk. It exists for the length of the request that produced
-        it and nothing else. Nobody else can load the report, and the report
-        cannot outlive your access to the repository.
+        you ask for it. The report and source are <strong>never cached</strong>.
+        If you are signed in and improvement workflows are enabled, GoodRepo
+        stores a private, account-owned snapshot containing scores, check
+        statuses, measurements and scan coverage so you can compare commits and
+        verify a saved fix plan. It stores no source files, tokens, scripts,
+        model excerpts or copied instructions. Access is checked with GitHub
+        again whenever you open that history.
+      </p>
+
+      <h2>Scan history and fix plans</h2>
+      <p>
+        Signed-in accounts may keep immutable quick-scan snapshots, selected
+        check IDs in saved fix plans, and the commits used to verify them.
+        Snapshots include the GitHub repository ID, owner and name, full commit
+        SHA, scores, measurements, unmeasured reasons, and coverage metadata.
+        This history is visible only to your account and is deleted with it.
+        Deleting a plan deletes its verification links; archiving keeps it.
       </p>
 
       <h2>Deep scans</h2>
@@ -97,7 +110,8 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Supabase</strong> hosts the Postgres database holding accounts
-          and deep-scan records.
+          and deep-scan records, scan snapshots, fix plans and verification
+          history.
         </li>
         <li>
           <strong>GitHub</strong> is the source of every repository we read and
@@ -118,7 +132,10 @@ export default function PrivacyPage() {
           your account is deleted.
         </li>
         <li>Cached public reports: until the scanning rules change.</li>
-        <li>Private scan results: not kept at all.</li>
+        <li>
+          Account-owned scan snapshots and fix plans: until you delete the plan
+          or your account. Private source and full reports are not kept.
+        </li>
       </ul>
 
       <h2>Your choices</h2>

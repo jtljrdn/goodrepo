@@ -33,13 +33,13 @@ staying fast, so nothing on `/[owner]/[repo]` may reach the model or the sandbox
 that cannot finish throws rather than returning, so the failure is not cached and the page
 degrades to the static report.
 
-**Deep scans are off by default.** `DEEP_SCAN_ENABLED` in `lib/flags.ts` reads
-`GOODREPO_DEEP_SCAN`, and while it is false the route 404s and the button does not render. Set
-`GOODREPO_DEEP_SCAN=1` in the root `.env.local` to work on it. Keep the flag: it is the master
-kill switch, and it is the only thing that stops a deep scan without a database round trip. The
-route is also `noindex` and its link is `prefetch={false}`. Note that the disabled route answers
-`200` with the 404 page rather than a `404` status, because the partial-prerender shell is
-flushed before `notFound()` runs.
+**Deep scans are controlled by Vercel Flags.** `deepScan` in `lib/flags.ts` declares the
+dashboard-managed `deep-scan` boolean through the `flags/next` SDK and Vercel adapter, with
+`false` as its safe fallback. While it is false the route 404s and the button does not render.
+Keep the flag: it is the master kill switch, and it is the only thing that stops a deep scan
+without a database round trip. The route is also `noindex` and its link is `prefetch={false}`.
+Note that the disabled route answers `200` with the 404 page rather than a `404` status, because
+the partial-prerender shell is flushed before `notFound()` runs.
 
 **Nothing reaches the sandbox without a signed-in account and a claimed quota slot.** The
 deep route redirects anonymous visitors to `/sign-in?next=…`, and `runDeepScan` takes a
@@ -90,14 +90,24 @@ of what replaces it. The redirect at `/` costs about five milliseconds; the blan
 never the redirect.
 
 **Every report a signed-in account opens writes one row into `goodrepo.scan_run`**, which is
-what the dashboard reads. The write happens in `components/log-scan.tsx`, a component that
-renders nothing and exists only to sit inside its own Suspense boundary: reading the session
+what the dashboard reads. The write happens in `components/report-history.tsx`, a component
+that exists only inside its own Suspense boundary: reading the session
 at the top of `app/[owner]/[repo]/page.tsx` would make that route dynamic and cost every
 public report its prerendered shell. `recordScan` swallows its own errors on purpose — a
 history row is worth less than the report it belongs to. The row is keyed by `(user_id,
 owner, repo, commit_sha, kind)`, so reloading a report does not inflate the count, and
 deleting an account cascades its history away; unlike `deep_scan_run`, nothing here meters
 spend, so there is no reason to keep orphan rows.
+
+**Improvement workflows are controlled by Vercel Flags.** `improvementWorkflow` in
+`lib/flags.ts` declares the dashboard-managed `improvement-workflow` boolean through the
+`flags/next` SDK and Vercel adapter, with `false` as its safe fallback. Apply the additive
+improvement-workflow migration before enabling it. When enabled,
+`components/report-history.tsx` records immutable quick-scan snapshots and chooses the
+previous baseline in one transaction. `/comparisons/[snapshotId]` and `/fixes/[planId]` are
+account-only, `noindex` routes. Plan mutations use verified sessions, immutable selected
+signal IDs, and idempotent request IDs. Disabling the flag restores the original report
+handoff while retaining saved rows.
 
 **App tables go in the `goodrepo` schema, not `public`.** `public` is what Supabase exposes
 through PostgREST, and this project's default privileges there grant `anon` and `authenticated`
@@ -113,7 +123,10 @@ covers and nothing else. It deliberately bypasses `scanAtSha`: that cache is key
 `(owner, repo, sha)` with no user in the key, and it is shared with anonymous visitors, the
 crawler and the OG image, so a single private report written into it would be readable by
 anyone who guessed the URL. **Do not "unify" the two paths through one cached function.**
-Not caching also means a report cannot outlive the access that produced it. The route is
+Private source and full reports cannot outlive the access that produced them. When the
+improvement workflow is enabled, bounded derived snapshots (scores, statuses, measurements
+and coverage only) may be stored as account-owned history; every later private detail read
+rechecks GitHub access and never feeds those snapshots into a public cache or route. The route is
 `noindex`, its links are `prefetch={false}` and `rel="nofollow"`, and it renders with
 `deepAvailable={false}` because the deep scan clones as GoodRepo itself and cannot reach a
 private repository.
