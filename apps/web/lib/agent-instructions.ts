@@ -4,29 +4,58 @@ import { signalSubject, type ScoredCategory } from "@/lib/score"
 
 const GUIDANCE: Partial<Record<SignalId, string>> = {
   readme: "Add a root README with the project purpose, setup and entry points.",
-  predictableRoot: "Document source roots and workspace boundaries first. Reorganize files only when it improves navigation without breaking imports or tooling.",
-  generatedExcluded: "Identify committed generated output. Add appropriate ignore rules and remove tracked artifacts only after verifying consumers can regenerate them.",
-  claudeMd: "Check the team's agent tooling. Add tool-specific guidance only if useful; reference shared instructions instead of duplicating them.",
-  docPackageManager: "Document the package manager and install command used by the lockfile and manifest.",
-  docTestCommand: "Document a working test command and its required working directory.",
-  docBuildCommand: "Document existing build and development commands, including workspace setup.",
-  docCodeStyle: "Document the conventions already enforced by the project, with concrete examples.",
-  testConfig: "Identify the actual test runner and its configuration. Repair missing setup using the existing stack.",
-  ciRunsTests: "Make CI invoke the real test suite from the correct working directory; follow existing workflow conventions.",
-  coverage: "Configure coverage reporting in the existing test runner. Do not claim coverage levels without measuring them.",
-  consistentRouteShape: "Compare related handlers and reuse the established pattern, preserving authentication and public API behavior.",
-  consistentNaming: "Check conventions within each affected folder. Rename only inconsistent files and update all references.",
-  singleDataLayer: "Verify client/server boundaries before changing data access. Direct database access in a server component is not automatically a defect.",
-  consistentErrors: "Align error handling within related modules while preserving API contracts and useful diagnostics.",
-  lintConfig: "Use the existing linter and shared workspace configs; add missing configuration without introducing a competing tool.",
-  lockfile: "Align the packageManager version with the existing lockfile. Regenerate lockfiles with that package manager; never hand-edit them.",
+  predictableRoot:
+    "Document source roots and workspace boundaries first. Reorganize files only when it improves navigation without breaking imports or tooling.",
+  generatedExcluded:
+    "Identify committed generated output. Add appropriate ignore rules and remove tracked artifacts only after verifying consumers can regenerate them.",
+  claudeMd:
+    "Check the team's agent tooling. Add tool-specific guidance only if useful; reference shared instructions instead of duplicating them.",
+  docPackageManager:
+    "Document the package manager and install command used by the lockfile and manifest.",
+  docTestCommand:
+    "Document a working test command and its required working directory.",
+  docBuildCommand:
+    "Document existing build and development commands, including workspace setup.",
+  docCodeStyle:
+    "Document the conventions already enforced by the project, with concrete examples.",
+  testConfig:
+    "Identify the actual test runner and its configuration. Repair missing setup using the existing stack.",
+  ciRunsTests:
+    "Make CI invoke the real test suite from the correct working directory; follow existing workflow conventions.",
+  coverage:
+    "Configure coverage reporting in the existing test runner. Do not claim coverage levels without measuring them.",
+  consistentRouteShape:
+    "Compare related handlers and reuse the established pattern, preserving authentication and public API behavior.",
+  consistentNaming:
+    "Check conventions within each affected folder. Rename only inconsistent files and update all references.",
+  singleDataLayer:
+    "Verify client/server boundaries before changing data access. Direct database access in a server component is not automatically a defect.",
+  consistentErrors:
+    "Align error handling within related modules while preserving API contracts and useful diagnostics.",
+  lintConfig:
+    "Use the existing linter and shared workspace configs; add missing configuration without introducing a competing tool.",
+  lockfile:
+    "Align the packageManager version with the existing lockfile. Regenerate lockfiles with that package manager; never hand-edit them.",
   lintScript: "Expose the existing linter through a documented package script.",
-  formatScript: "Expose the existing formatter through a script. Avoid unrelated repository-wide reformatting.",
-  buildScript: "Add or repair a build script appropriate to this package's actual output.",
-  container: "Assess whether a reproducible container or devcontainer would help this project before adding one merely for points.",
-  nodePinned: "Pin a compatible runtime using the project's existing version manager and align CI with it.",
-  noMegaFiles: "Find oversized source files and split cohesive responsibilities while preserving behavior and public exports.",
-  featureFolders: "Review package-level structure. Prefer clearer ownership and documentation over disruptive moves solely to satisfy a folder-name heuristic.",
+  formatScript:
+    "Expose the existing formatter through a script. Avoid unrelated repository-wide reformatting.",
+  buildScript:
+    "Add or repair a build script appropriate to this package's actual output.",
+  container:
+    "Assess whether a reproducible container or devcontainer would help this project before adding one merely for points.",
+  nodePinned:
+    "Pin a compatible runtime using the project's existing version manager and align CI with it.",
+  noMegaFiles:
+    "Find oversized source files and split cohesive responsibilities while preserving behavior and public exports.",
+  featureFolders:
+    "Review package-level structure. Prefer clearer ownership and documentation over disruptive moves solely to satisfy a folder-name heuristic.",
+}
+
+export function guidanceFor(id: SignalId): string {
+  return (
+    GUIDANCE[id] ??
+    "Verify this finding against the current source and fix the underlying issue using the repository's conventions."
+  )
 }
 
 type Input = {
@@ -36,6 +65,8 @@ type Input = {
   sha?: string | null
   kind?: "static" | "deep" | "private"
   verdicts?: SignalVerdict[]
+  selectedIds?: readonly SignalId[]
+  returnUrl?: string | null
 }
 
 // Repository-provided strings remain quoted evidence, including Markdown fence characters.
@@ -50,19 +81,46 @@ export function buildAgentInstructions({
   sha,
   kind = "static",
   verdicts = [],
+  selectedIds,
+  returnUrl = null,
 }: Input): string {
-  const recommendations = new Map(recommend(profile, categories).map(item => [item.id, item]))
-  const opportunities = categories.map(category => {
-    const failed = category.signals.filter(signal => signal.status === "fail")
-    const recoverable = failed.reduce((sum, signal) => sum + signal.points, 0)
-    return { category, failed, recoverable }
-  }).filter(item => item.failed.length > 0)
-    .sort((a, b) => b.recoverable / Math.max(1, b.category.totalPoints) - a.recoverable / Math.max(1, a.category.totalPoints))
+  const failedIds = new Set(
+    categories.flatMap((category) =>
+      category.signals.flatMap((signal) =>
+        signal.status === "fail" ? [signal.id] : []
+      )
+    )
+  )
+  const selected = selectedIds === undefined ? failedIds : new Set(selectedIds)
+  if (
+    selectedIds !== undefined &&
+    (selected.size === 0 ||
+      selected.size !== selectedIds.length ||
+      [...selected].some((id) => !failedIds.has(id)))
+  )
+    throw new Error("Selected instructions require unique failed signal IDs.")
+  const recommendations = new Map(
+    recommend(profile, categories).map((item) => [item.id, item])
+  )
+  const opportunities = categories
+    .map((category) => {
+      const failed = category.signals.filter(
+        (signal) => signal.status === "fail" && selected.has(signal.id)
+      )
+      const recoverable = failed.reduce((sum, signal) => sum + signal.points, 0)
+      return { category, failed, recoverable }
+    })
+    .filter((item) => item.failed.length > 0)
+    .sort(
+      (a, b) =>
+        b.recoverable / Math.max(1, b.category.totalPoints) -
+        a.recoverable / Math.max(1, a.category.totalPoints)
+    )
 
   const metadata = {
     repository: `${profile.owner}/${profile.repo}`,
     repositoryUrl: `https://github.com/${encodeURIComponent(profile.owner)}/${encodeURIComponent(profile.repo)}`,
-    scannedCommit: sha || profile.commitSha,
+    scannedCommit: sha && /^[0-9a-f]{40}$/i.test(sha) ? sha : profile.commitSha,
     scanKind: kind,
     overallScore: overall,
     framework: profile.framework,
@@ -75,28 +133,40 @@ export function buildAgentInstructions({
     configCoverage: profile.configCoverage ?? null,
     truncated: profile.truncated,
   }
-  const tasks = opportunities.map(({category, failed, recoverable}) => ({
+  const tasks = opportunities.map(({ category, failed, recoverable }) => ({
     category: category.name,
     currentScore: category.score,
     earnedCategoryPoints: category.earnedPoints,
     measuredCategoryPoints: category.totalPoints,
     recoverableCategoryPoints: recoverable,
-    checks: [...failed].sort((a,b) => b.points - a.points).map(signal => {
-      const recommendation = recommendations.get(signal.id)
-      return {
-        id: signal.id,
-        subject: signalSubject(signal.id),
-        finding: signal.text,
-        categoryPoints: signal.points,
-        measurement: signal.measurement ?? null,
-        suggestedFix: recommendation
-          ? [recommendation.fix, ...recommendation.bullets]
-          : [GUIDANCE[signal.id] ?? "Verify this finding against the current source and fix the underlying issue using the repository's conventions."],
-        deepEvidence: verdicts.filter(verdict => verdict.signal === signal.id),
-      }
-    }),
+    checks: [...failed]
+      .sort((a, b) => b.points - a.points)
+      .map((signal) => {
+        const recommendation = recommendations.get(signal.id)
+        return {
+          id: signal.id,
+          subject: signalSubject(signal.id),
+          finding: signal.text,
+          categoryPoints: signal.points,
+          measurement: signal.measurement ?? null,
+          suggestedFix: recommendation
+            ? [recommendation.fix, ...recommendation.bullets]
+            : [guidanceFor(signal.id)],
+          deepEvidence: verdicts.filter(
+            (verdict) => verdict.signal === signal.id
+          ),
+        }
+      }),
   }))
-  const unmeasured = categories.flatMap(category => category.signals.filter(signal => signal.status === "not-measured").map(signal => ({id:signal.id, category:category.name, reason:signal.text})))
+  const unmeasured = categories.flatMap((category) =>
+    category.signals
+      .filter((signal) => signal.status === "not-measured")
+      .map((signal) => ({
+        id: signal.id,
+        category: category.name,
+        reason: signal.text,
+      }))
+  )
 
   return [
     "Improve this repository using the GoodRepo scan below.",
@@ -108,16 +178,33 @@ export function buildAgentInstructions({
     "4. Fix real problems, not just the score. Do not pad documentation, add placeholder tests, disable checks or reorganize a sound architecture to satisfy a heuristic. If a finding is incorrect or inapplicable, explain the evidence instead of forcing a change.",
     "5. Preserve public behavior, authentication and data access boundaries. Keep secrets out of code, documentation and example env files. Do not deploy, publish, run production migrations or make destructive changes as part of this task.",
     "6. Run focused tests for behavior changes, then the repository's documented lint, typecheck, test and build checks as applicable. Report unavailable checks honestly. Summarize files changed, findings resolved, checks run and any remaining issues; rescan the new commit when available instead of claiming an unmeasured new score.",
+    "7. Commit and push the completed changes before returning to GoodRepo for verification.",
+    ...(returnUrl
+      ? ["", `Return to verify this saved plan: ${returnUrl}`]
+      : []),
     "",
     "Scan context",
     evidenceBlock(metadata),
     "",
     "Scores that could improve",
     "Category points are weighted check points within that category, not direct additions to the overall score. The overall score averages measured categories. Potential gains depend on confirming the findings and rescanning.",
-    ...(opportunities.length ? opportunities.map(({category,recoverable}) => `- ${category.name}: ${category.score ?? "unmeasured"}/100; ${recoverable} recoverable category points out of ${category.totalPoints} measured.`) : ["No failed checks were measured. Do not invent work or claim the repository has no possible issues."]),
+    ...(opportunities.length
+      ? opportunities.map(
+          ({ category, recoverable }) =>
+            `- ${category.name}: ${category.score ?? "unmeasured"}/100; ${recoverable} recoverable category points out of ${category.totalPoints} measured.`
+        )
+      : [
+          "No failed checks were measured. Do not invent work or claim the repository has no possible issues.",
+        ]),
     "",
     "Failed checks and suggested fixes",
     evidenceBlock(tasks),
-    ...(unmeasured.length ? ["", "Unmeasured checks — context only, not a repair backlog", evidenceBlock(unmeasured)] : []),
+    ...(selectedIds === undefined && unmeasured.length
+      ? [
+          "",
+          "Unmeasured checks — context only, not a repair backlog",
+          evidenceBlock(unmeasured),
+        ]
+      : []),
   ].join("\n")
 }
