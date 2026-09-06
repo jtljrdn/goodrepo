@@ -3,6 +3,7 @@ import { analyze } from "./index"
 import type { RepoMeta, SignalId, TreeEntry } from "./types"
 
 const meta: RepoMeta = {
+  repositoryId: "1",
   owner: "acme",
   repo: "app",
   description: "",

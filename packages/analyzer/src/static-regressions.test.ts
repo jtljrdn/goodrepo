@@ -5,6 +5,7 @@ import { workspacePaths } from "./workspaces"
 import type { RepoMeta } from "./types"
 
 const meta: RepoMeta = {
+  repositoryId: "1",
   owner: "test",
   repo: "repo",
   description: "",

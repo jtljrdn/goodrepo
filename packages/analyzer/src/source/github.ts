@@ -156,8 +156,19 @@ export async function fetchRepoMeta(
   const data = body as Record<string, unknown>
 
   return {
-    owner,
-    repo,
+    repositoryId:
+      typeof data.node_id === "string"
+        ? data.node_id
+        : typeof data.id === "number" || typeof data.id === "string"
+          ? String(data.id)
+          : "",
+    owner:
+      typeof data.owner === "object" &&
+      data.owner !== null &&
+      typeof (data.owner as Record<string, unknown>).login === "string"
+        ? ((data.owner as Record<string, unknown>).login as string)
+        : owner,
+    repo: typeof data.name === "string" ? data.name : repo,
     description: typeof data.description === "string" ? data.description : "",
     stars:
       typeof data.stargazers_count === "number" ? data.stargazers_count : 0,

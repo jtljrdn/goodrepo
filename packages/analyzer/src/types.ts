@@ -53,6 +53,7 @@ export type TreeEntry = {
 }
 
 export type RepoMeta = {
+  repositoryId: string
   owner: string
   repo: string
   description: string

@@ -135,7 +135,7 @@ async function measure(
     tree.entries,
     texts,
     sampled,
-    { ...meta, commitSha: sha.slice(0, 7) },
+    { ...meta, commitSha: sha },
     tree.truncated
       ? {
           cap: "tree" as const,
@@ -158,7 +158,7 @@ function measurePublic(
   return measure(owner, repo, sha, process.env.GITHUB_TOKEN)
 }
 
-const cachedMeasure = cachedByCommit("scan", "v5", measurePublic)
+const cachedMeasure = cachedByCommit("scan", "v6", measurePublic)
 
 async function settle(run: Promise<ScanResult>): Promise<ScanResult> {
   try {

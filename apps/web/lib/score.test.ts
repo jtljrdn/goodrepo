@@ -15,6 +15,7 @@ function profileWith(
     for (const signal of category.signals) full[signal.id] = false
   }
   return {
+    repositoryId: "1",
     owner: "a",
     repo: "b",
     description: "",

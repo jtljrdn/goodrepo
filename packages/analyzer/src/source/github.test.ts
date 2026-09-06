@@ -64,6 +64,25 @@ test("secondary rate limits need no remaining-quota header", async () => {
   ).rejects.toMatchObject({ kind: "rate-limited" })
 })
 
+test("repository metadata carries stable and canonical GitHub identity", async () => {
+  fetchMock.mockImplementation(async () =>
+    Response.json({
+      id: 12345,
+      node_id: "R_repo12345",
+      name: "Canonical",
+      owner: { login: "Acme" },
+      description: "App",
+      stargazers_count: 4,
+      default_branch: "main",
+    })
+  )
+  await expect(fetchRepoMeta("old", "name")).resolves.toMatchObject({
+    repositoryId: "R_repo12345",
+    owner: "Acme",
+    repo: "Canonical",
+  })
+})
+
 test("GraphQL partial errors, missing blobs and malformed JSON abort", async () => {
   for (const body of [
     JSON.stringify({
