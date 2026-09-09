@@ -1,23 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalDependencies": [
-    ".env",
-    ".env.local"
-  ],
+  "globalDependencies": [".env", ".env.local"],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*"
-      ],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**"
-      ],
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"],
       "env": [
         "AI_GATEWAY_API_KEY",
         "BETTER_AUTH_SECRET",
@@ -30,15 +19,21 @@
         "GOODREPO_DEEP_SCAN",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "LANGFUSE_BASE_URL",
+        "LANGFUSE_PUBLIC_KEY",
+        "LANGFUSE_RELEASE",
+        "LANGFUSE_SECRET_KEY",
+        "LANGFUSE_TRACING_ENVIRONMENT",
+        "NEXT_RUNTIME",
         "VERCEL_OIDC_TOKEN",
+        "VERCEL_ENV",
+        "VERCEL_GIT_COMMIT_SHA",
         "VERCEL_PROJECT_PRODUCTION_URL",
         "SUPABASE_DATABASE_PASSWORD"
       ]
     },
     "lint": {
-      "dependsOn": [
-        "^lint"
-      ],
+      "dependsOn": ["^lint"],
       "env": [
         "AI_GATEWAY_API_KEY",
         "BETTER_AUTH_SECRET",
@@ -51,24 +46,26 @@
         "GOODREPO_DEEP_SCAN",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "LANGFUSE_BASE_URL",
+        "LANGFUSE_PUBLIC_KEY",
+        "LANGFUSE_RELEASE",
+        "LANGFUSE_SECRET_KEY",
+        "LANGFUSE_TRACING_ENVIRONMENT",
+        "NEXT_RUNTIME",
         "VERCEL_OIDC_TOKEN",
+        "VERCEL_ENV",
+        "VERCEL_GIT_COMMIT_SHA",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     },
     "format": {
-      "dependsOn": [
-        "^format"
-      ]
+      "dependsOn": ["^format"]
     },
     "typecheck": {
-      "dependsOn": [
-        "^typecheck"
-      ]
+      "dependsOn": ["^typecheck"]
     },
     "test": {
-      "dependsOn": [
-        "^test"
-      ]
+      "dependsOn": ["^test"]
     },
     "dev": {
       "cache": false,
@@ -85,7 +82,15 @@
         "GOODREPO_DEEP_SCAN",
         "GOODREPO_MODEL",
         "GOODREPO_MONTHLY_DEEP_SCANS",
+        "LANGFUSE_BASE_URL",
+        "LANGFUSE_PUBLIC_KEY",
+        "LANGFUSE_RELEASE",
+        "LANGFUSE_SECRET_KEY",
+        "LANGFUSE_TRACING_ENVIRONMENT",
+        "NEXT_RUNTIME",
         "VERCEL_OIDC_TOKEN",
+        "VERCEL_ENV",
+        "VERCEL_GIT_COMMIT_SHA",
         "VERCEL_PROJECT_PRODUCTION_URL"
       ]
     }

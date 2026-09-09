@@ -100,6 +100,7 @@ export async function extractClaims(checkout: Checkout): Promise<ClaimSet> {
       prompt: buildDocPrompt(docs),
       output: Output.object({ schema }),
       providerOptions: { gateway: { caching: "auto" } },
+      telemetry: { functionId: "extract-documentation-claims" },
     })
     return { ok: true, claims: output.claims }
   } catch (error) {
