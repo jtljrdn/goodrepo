@@ -344,40 +344,43 @@ export function FixWorkflow({
                   ))}
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="text-[10px] text-muted-foreground tabular-nums">
-                    {selectedIds.length}/{choices.length} selected
-                  </span>
-                  <button
-                    type="button"
-                    onClick={selectAll}
-                    className="min-h-8 text-xs underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
-                  >
-                    Select all
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearSelection}
-                    className="min-h-8 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-1 focus-visible:outline-ring"
-                  >
-                    Clear
-                  </button>
-                  <span className="hidden flex-1 sm:block" />
-                  <p className="text-[10px] text-muted-foreground">
-                    Saved privately against this commit
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={save}
-                    disabled={pending || selectedIds.length === 0}
-                    className="min-h-10 px-3"
-                  >
-                    {activeTask === "save"
-                      ? "Saving plan"
-                      : "Save and continue"}
-                    <span aria-hidden>→</span>
-                  </Button>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <span className="text-[10px] text-muted-foreground tabular-nums">
+                      {selectedIds.length}/{choices.length} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={selectAll}
+                      className="min-h-8 text-xs underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className="min-h-8 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-1 focus-visible:outline-ring"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row-reverse sm:items-center sm:gap-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={save}
+                      disabled={pending || selectedIds.length === 0}
+                      className="min-h-10 w-full justify-center px-3 sm:w-auto"
+                    >
+                      {activeTask === "save"
+                        ? "Saving plan"
+                        : "Save and continue"}
+                      <span aria-hidden>→</span>
+                    </Button>
+                    <p className="text-center text-[11px] text-muted-foreground sm:text-left">
+                      Saved privately against this commit
+                    </p>
+                  </div>
                 </div>
               </div>
 

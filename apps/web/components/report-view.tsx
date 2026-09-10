@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 import { evaluate } from "flags/next"
 import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
 import { SiteHeader } from "@/components/site-header"
 import {
   CategoryDetail,
@@ -150,6 +151,7 @@ export async function ReportView({
         (signal) =>
           signal.status === "not-measured" && DEEP_SCAN_ONLY.has(signal.id)
       ).length
+  const showWorkflow = improvementWorkflowEnabled && !ran && choices.length > 0
 
   return (
     <>
@@ -157,7 +159,7 @@ export async function ReportView({
         profile={profile}
         overall={overall}
         actions={
-          improvementWorkflowEnabled && !ran && choices.length > 0 ? (
+          showWorkflow ? (
             <FixWorkflow
               repository={{
                 owner: profile.owner,
@@ -207,7 +209,12 @@ export async function ReportView({
         }
       />
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border/60 pt-4 text-xs">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-xs",
+          !showWorkflow && "border-t border-border/60"
+        )}
+      >
         <span className="text-muted-foreground">
           {ran ? "Deep scan" : "Quick scan"}
         </span>
