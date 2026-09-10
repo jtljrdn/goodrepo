@@ -8,6 +8,7 @@
     "build": "bun --env-file=../../.env --env-file=../../.env.local next build",
     "start": "bun --env-file=../../.env --env-file=../../.env.local next start",
     "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "bun --env-file=../../.env --env-file=../../.env.local next typegen && tsc --noEmit"

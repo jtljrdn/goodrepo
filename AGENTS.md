@@ -198,6 +198,60 @@ with `Cannot find name 'PageProps'`. Never hand-write those types.
 
 Tests are pure and deterministic: no network, no database. Detector tests build fixture inputs in memory, so a new detector should be testable the same way.
 
+`bun run test:coverage` runs the two test-owning workspaces with Bun's coverage
+reporter and writes ignored `coverage/` directories inside those workspaces. CI
+uses this command so coverage is measured on every change; no minimum threshold
+is claimed or enforced.
+
+## Database migrations
+
+- Application migrations are hand-authored SQL files in `supabase/migrations/`,
+  ordered by their UTC timestamp prefix. There is no migration generator in this
+  repository: create one new `<YYYYMMDDHHMMSS>_<name>.sql` file for each change
+  and do not rewrite a migration that has already been applied.
+- Fully qualify every application object with the `goodrepo` schema. The
+  `better_auth` schema is owned by Better Auth's CLI; do not put application
+  tables there or edit its generated schema by hand.
+- For local development, apply pending files in timestamp order through the
+  Supabase SQL editor for the developer database, then test the application
+  against that database. Use a disposable database or branch when validating a
+  destructive migration.
+- CI does not connect to Supabase or apply migrations. Production migrations are
+  a separate maintainer operation: apply the reviewed SQL through the Supabase
+  SQL editor before enabling code or a Vercel Flag that depends on it. Never put
+  database credentials into a migration, workflow, or example environment file.
+
+## API and server boundaries
+
+- Do not add API routes for scan work. Page server components call the
+  orchestration in `apps/web/lib/scan.ts`; the only route handler is
+  `app/api/auth/[...all]/route.ts`, which delegates both methods to Better Auth.
+- Validate untrusted server-action input before performing reads or writes. The
+  canonical example is `apps/web/lib/fix-actions.ts`, with reusable parsing and
+  allow-list helpers in `apps/web/lib/fix-input.ts`. Analyzer model/tool schemas
+  use Zod and live beside the owning deep-scan module.
+- Server actions return typed discriminated results such as `FixActionState` for
+  expected errors. They log unexpected failures without exposing internals, and
+  use `redirect()` only after a successful mutation when navigation is required.
+- Display and best-effort history reads/writes may use `currentSession()`. Any
+  action that spends quota, reads private data, or mutates an account-owned fix
+  plan must authenticate with `verifiedSession()` at the server boundary.
+
+## Code style
+
+- Prettier is the source of formatting truth: two spaces, double quotes, no
+  semicolons, trailing commas where valid in ES5, and an 80-column target. Run
+  `bun run format` rather than hand-formatting large edits.
+- Use kebab-case file names, PascalCase React components and types, camelCase
+  functions and variables, and uppercase names only for module-level constants.
+  Keep tests next to their subject as `<name>.test.ts` or `<name>.test.tsx`.
+- Prefer small owning modules and explicit type-only imports. Put repository
+  measurement in `packages/analyzer`, presentation/orchestration in
+  `apps/web/lib`, and reusable visual primitives in `packages/ui`; do not move
+  files solely to replace these deliberate layer-oriented directories.
+- ESLint enforces TypeScript, React, Next.js, hooks, and Turbo rules. Generated
+  output is ignored, and `bun.lock` is regenerated only by `bun install`.
+
 ## Environment
 
 Env files live at the **repo root**, not in `apps/web`. The web workspace scripts
