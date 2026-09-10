@@ -2,10 +2,19 @@
 
 import { useActionState } from "react"
 import { Button } from "@workspace/ui/components/button"
+import { cn } from "@workspace/ui/lib/utils"
 import { verifyFixPlanAction } from "@/lib/fix-actions"
 import { INITIAL_FIX_ACTION_STATE } from "@/lib/fix-action-state"
 
-export function VerificationForm({ planId }: { planId: string }) {
+export function VerificationForm({
+  planId,
+  embedded = false,
+  onVerificationStart,
+}: {
+  planId: string
+  embedded?: boolean
+  onVerificationStart?: () => void
+}) {
   const action = verifyFixPlanAction.bind(null, planId)
   const [state, formAction, pending] = useActionState(
     action,
@@ -14,17 +23,22 @@ export function VerificationForm({ planId }: { planId: string }) {
   return (
     <form
       action={formAction}
-      className="border border-border/60 bg-muted/20 p-5 sm:p-6"
+      onSubmit={onVerificationStart}
+      className={cn(
+        embedded
+          ? "mt-4 min-w-0"
+          : "border border-border/60 bg-muted/20 p-5 sm:p-6"
+      )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="min-w-0 flex-1 text-xs font-medium text-foreground">
-          Target commit{" "}
+          Target commit SHA{" "}
           <span className="font-normal text-muted-foreground">(optional)</span>
           <input
             key={state.targetSha ?? "head"}
             name="target"
             defaultValue={state.status === "unsaved" ? state.targetSha : ""}
-            placeholder="Default branch HEAD, full SHA, or GitHub commit URL"
+            placeholder="Full SHA or GitHub commit URL"
             className="mt-2 block min-h-11 w-full border border-input bg-background px-3 font-mono text-sm text-foreground transition-colors outline-none placeholder:font-sans placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring"
           />
         </label>

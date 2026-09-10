@@ -13,7 +13,7 @@ export default function Loading() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-6">
+      <main className="mx-auto w-full max-w-5xl px-6">
         <div className="flex flex-col gap-8 py-10 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground">Deep scan</p>
@@ -30,7 +30,9 @@ export default function Loading() {
               <GridLoader variant="deep" className="text-5xl" />
               <span className="sr-only">Deep scan in progress</span>
             </span>
-            <span className="text-xs text-muted-foreground"><Elapsed /></span>
+            <span className="text-xs text-muted-foreground">
+              <Elapsed />
+            </span>
           </div>
         </div>
         <ul className="space-y-2 border-t border-border/60 py-8 text-xs">
@@ -45,9 +47,8 @@ export default function Loading() {
           ))}
         </ul>
         <p className="border-t border-border/60 py-4 text-xs text-muted-foreground">
-          The quick scan is already done. Only the few checks that need the
-          code to be read are answered here, and the result is saved for this
-          commit.
+          The quick scan is already done. Only the few checks that need the code
+          to be read are answered here, and the result is saved for this commit.
         </p>
       </main>
     </>

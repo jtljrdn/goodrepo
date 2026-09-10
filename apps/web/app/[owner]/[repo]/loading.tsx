@@ -14,14 +14,17 @@ export default function Loading() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-6">
+      <main className="mx-auto w-full max-w-5xl px-6">
         <div className="flex flex-col gap-8 py-10 sm:flex-row sm:items-center">
           <div className="flex-1 space-y-3">
-            <div className="h-3 w-40 motion-safe:animate-pulse bg-muted" />
-            <div className="h-7 w-64 motion-safe:animate-pulse bg-muted" />
-            <div className="h-3 w-32 motion-safe:animate-pulse bg-muted" />
+            <div className="h-3 w-40 bg-muted motion-safe:animate-pulse" />
+            <div className="h-7 w-64 bg-muted motion-safe:animate-pulse" />
+            <div className="h-3 w-32 bg-muted motion-safe:animate-pulse" />
           </div>
-          <div role="status" className="flex size-32 shrink-0 items-center justify-center text-success">
+          <div
+            role="status"
+            className="flex size-32 shrink-0 items-center justify-center text-success"
+          >
             <GridLoader className="text-5xl" />
             <span className="sr-only">Scanning repository</span>
           </div>

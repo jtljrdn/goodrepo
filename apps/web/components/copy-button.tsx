@@ -19,6 +19,7 @@ export function CopyButton({
   label,
   text = "Copy",
   manualFallback = false,
+  variant = "outline",
   className,
   disabled = false,
 }: {
@@ -26,6 +27,7 @@ export function CopyButton({
   label: string
   text?: string
   manualFallback?: boolean
+  variant?: React.ComponentProps<typeof Button>["variant"]
   className?: string
   disabled?: boolean
 }) {
@@ -52,7 +54,7 @@ export function CopyButton({
   const button = (
     <Button
       type="button"
-      variant="outline"
+      variant={state === "error" ? "destructive" : variant}
       size="sm"
       onClick={copy}
       disabled={disabled}

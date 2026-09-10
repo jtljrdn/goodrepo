@@ -41,6 +41,7 @@ export default async function PrivateReportPage(
   const search = await props.searchParams
   const ref = readSha(search.sha)
   const initialSelected = readSelectedQuery(search.fixes)
+  const initiallyOpen = search.choose === "1" || initialSelected.length > 0
   const query = shaQuery(ref)
   const here = `/${owner}/${repo}/private${query}`
 
@@ -95,6 +96,7 @@ export default async function PrivateReportPage(
         deepAvailable={false}
         mode="private"
         initialSelected={initialSelected}
+        initiallyOpen={initiallyOpen}
       />
     </ReportShell>
   )

@@ -18,7 +18,7 @@ import { buildAgentInstructions, guidanceFor } from "@/lib/agent-instructions"
 import { recommend } from "@/lib/recommendations"
 import { shaQuery } from "@/lib/scan"
 import { DEEP_SCAN_ONLY, type ScoredCategory } from "@/lib/score"
-import { FixSelector, type FixChoice } from "@/components/fix-selector"
+import { FixWorkflow, type FixChoice } from "@/components/fix-workflow"
 import { ReportHistory } from "@/components/report-history"
 
 export type DeepDetail = {
@@ -54,7 +54,7 @@ export function ReportShell({
           </Button>
         </Link>
       </SiteHeader>
-      <main className="mx-auto max-w-5xl px-6 pb-24">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-6 pb-24">{children}</main>
     </>
   )
 }
@@ -88,6 +88,7 @@ export async function ReportView({
   deepAvailable = true,
   mode = "public",
   initialSelected = [],
+  initiallyOpen = false,
 }: {
   profile: RepoProfile
   overall: number | null
@@ -97,6 +98,7 @@ export async function ReportView({
   deepAvailable?: boolean
   mode?: "public" | "private"
   initialSelected?: SignalId[]
+  initiallyOpen?: boolean
 }) {
   const { deepScanEnabled, improvementWorkflowEnabled } = await evaluate({
     deepScanEnabled: deepScan,
@@ -155,43 +157,53 @@ export async function ReportView({
         profile={profile}
         overall={overall}
         actions={
-          <>
-            {improvementWorkflowEnabled && !ran && choices.length > 0 ? (
-              <a href="#choose-fixes">
-                <Button size="sm" className="min-h-11">
-                  Choose fixes
-                </Button>
-              </a>
-            ) : null}
-            <CopyButton
-              value={instructions}
-              label="Copy all instructions"
-              text={
-                improvementWorkflowEnabled
-                  ? "Copy all instructions"
-                  : "Copy instructions for agent"
-              }
-              manualFallback
-              className="min-h-11"
+          improvementWorkflowEnabled && !ran && choices.length > 0 ? (
+            <FixWorkflow
+              repository={{
+                owner: profile.owner,
+                repo: profile.repo,
+                commitSha: profile.commitSha,
+              }}
+              mode={mode}
+              choices={choices}
+              initialSelected={initialSelected}
+              initiallyOpen={initiallyOpen}
             />
-            {ran ? (
-              <Link
-                href={`/${profile.owner}/${profile.repo}${query}${query ? "&" : "?"}choose=1`}
-                className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
-              >
-                Choose fixes in quick report
-              </Link>
-            ) : pending > 0 && deepAvailable && deepScanEnabled ? (
-              <Link
-                href={`/${profile.owner}/${profile.repo}/deep${query}`}
-                prefetch={false}
-                rel="nofollow"
-                className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
-              >
-                Run deep scan
-              </Link>
-            ) : null}
-          </>
+          ) : (
+            <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
+              {improvementWorkflowEnabled && ran && choices.length > 0 ? (
+                <Link
+                  href={`/${profile.owner}/${profile.repo}${query}${query ? "&" : "?"}choose=1`}
+                >
+                  <Button size="sm" className="min-h-11 px-4">
+                    Fix with your agent
+                    <span aria-hidden>→</span>
+                  </Button>
+                </Link>
+              ) : null}
+              <CopyButton
+                value={instructions}
+                label="Copy all instructions"
+                text={
+                  improvementWorkflowEnabled
+                    ? "Copy complete scan"
+                    : "Copy instructions for agent"
+                }
+                manualFallback
+                className="min-h-11"
+              />
+              {!ran && pending > 0 && deepAvailable && deepScanEnabled ? (
+                <Link
+                  href={`/${profile.owner}/${profile.repo}/deep${query}`}
+                  prefetch={false}
+                  rel="nofollow"
+                  className="inline-flex min-h-11 items-center text-xs text-foreground underline-offset-4 hover:underline focus-visible:outline-1 focus-visible:outline-ring"
+                >
+                  Run deep scan
+                </Link>
+              ) : null}
+            </div>
+          )
         }
       />
 
@@ -261,10 +273,10 @@ export async function ReportView({
         </div>
       </Section>
 
-      <Section
-        title="What to fix"
-        action={
-          improvementWorkflowEnabled && !ran ? null : (
+      {improvementWorkflowEnabled && !ran ? null : (
+        <Section
+          title="What to fix"
+          action={
             <CopyButton
               value={instructions}
               label="Copy instructions for agent"
@@ -272,39 +284,28 @@ export async function ReportView({
               manualFallback
               className="min-h-9"
             />
-          )
-        }
-      >
-        {improvementWorkflowEnabled && !ran && choices.length > 0 ? (
-          <FixSelector
-            repository={{
-              owner: profile.owner,
-              repo: profile.repo,
-              commitSha: profile.commitSha,
-            }}
-            mode={mode}
-            choices={choices}
-            initialSelected={initialSelected}
-          />
-        ) : recommendations.length > 0 ? (
-          <ul>
-            {recommendations.map((recommendation, index) => (
-              <RecommendationItem
-                key={recommendation.id}
-                index={index}
-                recommendation={recommendation}
-                profile={profile}
-              />
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            {failed > 0
-              ? `${failed} failed checks. Copy the instructions for a complete fix list.`
-              : "No failed checks in this scan."}
-          </p>
-        )}
-      </Section>
+          }
+        >
+          {recommendations.length > 0 ? (
+            <ul>
+              {recommendations.map((recommendation, index) => (
+                <RecommendationItem
+                  key={recommendation.id}
+                  index={index}
+                  recommendation={recommendation}
+                  profile={profile}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {failed > 0
+                ? `${failed} failed checks. Copy the instructions for a complete fix list.`
+                : "No failed checks in this scan."}
+            </p>
+          )}
+        </Section>
+      )}
     </>
   )
 }

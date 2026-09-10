@@ -11,7 +11,7 @@ export function SiteHeader({
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-12 max-w-5xl items-center px-6">
+      <div className="mx-auto flex h-12 w-full max-w-5xl items-center px-6">
         <Link
           href="/"
           className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-70"

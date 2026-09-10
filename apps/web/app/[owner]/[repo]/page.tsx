@@ -36,6 +36,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
   const search = await props.searchParams
   const ref = readSha(search.sha)
   const initialSelected = readSelectedQuery(search.fixes)
+  const initiallyOpen = search.choose === "1" || initialSelected.length > 0
   const result = await runScan(owner, repo, ref)
 
   if (!result.ok) {
@@ -72,6 +73,7 @@ export default async function ReportPage(props: PageProps<"/[owner]/[repo]">) {
         categories={result.categories}
         sha={ref}
         initialSelected={initialSelected}
+        initiallyOpen={initiallyOpen}
       />
     </ReportShell>
   )

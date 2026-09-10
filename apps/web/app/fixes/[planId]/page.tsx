@@ -111,7 +111,8 @@ export default async function FixPlanPage(props: PageProps<"/fixes/[planId]">) {
                   label="Copy plan instructions"
                   text="Copy instructions"
                   manualFallback
-                  className="min-h-9 bg-primary px-3 text-primary-foreground hover:bg-primary/80"
+                  variant="default"
+                  className="min-h-9 px-3"
                 />
               ) : (
                 <p className="max-w-lg border border-destructive/40 px-3 py-2 text-xs text-destructive">
@@ -171,7 +172,7 @@ export default async function FixPlanPage(props: PageProps<"/fixes/[planId]">) {
                     {signal.finding}
                   </p>
                 </div>
-                <span className="w-fit border border-border/60 px-2 py-1 text-[11px] text-muted-foreground sm:mt-[-0.25rem]">
+                <span className="w-fit self-start border border-border/60 px-2 py-1 text-[11px] whitespace-nowrap text-muted-foreground">
                   {category}
                 </span>
               </li>

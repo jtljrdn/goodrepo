@@ -178,7 +178,7 @@ export function buildAgentInstructions({
     "4. Fix real problems, not just the score. Do not pad documentation, add placeholder tests, disable checks or reorganize a sound architecture to satisfy a heuristic. If a finding is incorrect or inapplicable, explain the evidence instead of forcing a change.",
     "5. Preserve public behavior, authentication and data access boundaries. Keep secrets out of code, documentation and example env files. Do not deploy, publish, run production migrations or make destructive changes as part of this task.",
     "6. Run focused tests for behavior changes, then the repository's documented lint, typecheck, test and build checks as applicable. Report unavailable checks honestly. Summarize files changed, findings resolved, checks run and any remaining issues; rescan the new commit when available instead of claiming an unmeasured new score.",
-    "7. Commit and push the completed changes before returning to GoodRepo for verification.",
+    "7. Create a new branch for this work. Commit and push the completed changes before returning to GoodRepo for verification.",
     ...(returnUrl
       ? ["", `Return to verify this saved plan: ${returnUrl}`]
       : []),

@@ -48,7 +48,10 @@ export function Section({
     <section className="border-t border-border/60 py-10">
       <div className="mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <h2 className="text-sm font-medium tracking-tight">{title}</h2>
-        {action ?? (hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null)}
+        {action ??
+          (hint ? (
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          ) : null)}
       </div>
       {children}
     </section>
@@ -83,13 +86,23 @@ const SIGNAL_TONE = {
   "not-measured": "text-muted-foreground/60",
 } as const
 
-export function ScoreDial({ score, className }: { score: number | null; className?: string }) {
+export function ScoreDial({
+  score,
+  className,
+}: {
+  score: number | null
+  className?: string
+}) {
   const radius = 44
-  const circumference = 2 * Math.PI * radius
 
   if (score === null) {
     return (
-      <div className={cn("flex size-32 shrink-0 items-center justify-center border border-border/60", className)}>
+      <div
+        className={cn(
+          "flex size-32 shrink-0 items-center justify-center border border-border/60",
+          className
+        )}
+      >
         <span className="text-xs text-muted-foreground">not scored</span>
       </div>
     )
@@ -112,10 +125,12 @@ export function ScoreDial({ score, className }: { score: number | null; classNam
           cx="50"
           cy="50"
           r={radius}
+          pathLength="100"
           fill="none"
           strokeWidth="4"
-          strokeDasharray={`${(score / 100) * circumference} ${circumference}`}
-          className={cn("stroke-current", BAND_TEXT[tone])}
+          strokeDasharray="100"
+          strokeDashoffset={100 - score}
+          className={cn("score-dial-meter stroke-current", BAND_TEXT[tone])}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -152,22 +167,28 @@ export function ReportHeadline({
         <h1 className="text-xl font-medium tracking-tight sm:text-3xl">
           Agent Readiness
         </h1>
-        <p className="mt-2 break-all text-sm text-muted-foreground">
-          {profile.owner}/<span className="text-foreground">{profile.repo}</span>
+        <p className="mt-2 text-sm break-all text-muted-foreground">
+          {profile.owner}/
+          <span className="text-foreground">{profile.repo}</span>
         </p>
-        <p className={cn("mt-3 text-sm", tone ? BAND_TEXT[tone] : "text-muted-foreground")}>
+        <p
+          className={cn(
+            "mt-3 text-sm",
+            tone ? BAND_TEXT[tone] : "text-muted-foreground"
+          )}
+        >
           {tone ? BAND_LABEL[tone] : "Nothing could be scored"}
         </p>
       </div>
       <ScoreDial score={overall} className="size-24 sm:row-span-3 sm:size-32" />
       <ul className="col-span-2 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground sm:col-span-1">
-        {meta.map((item) => <li key={item} className="break-all">{item}</li>)}
+        {meta.map((item) => (
+          <li key={item} className="break-all">
+            {item}
+          </li>
+        ))}
       </ul>
-      {actions ? (
-        <div className="col-span-2 flex flex-wrap items-start gap-x-5 gap-y-3 sm:col-span-1">
-          {actions}
-        </div>
-      ) : null}
+      {actions ? <div className="col-span-2 min-w-0">{actions}</div> : null}
     </div>
   )
 }
