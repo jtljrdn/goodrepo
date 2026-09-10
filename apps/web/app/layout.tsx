@@ -63,7 +63,7 @@ export default function RootLayout({
         jetbrainsMono.variable
       )}
     >
-      <body>
+      <body className="flex min-h-dvh flex-col">
         <ThemeProvider>
           <Suspense>{children}</Suspense>
           <Footer />

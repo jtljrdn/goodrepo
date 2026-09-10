@@ -21,7 +21,7 @@ export async function Footer() {
   const stars = await starCount()
 
   return (
-    <footer className="border-t border-border/60">
+    <footer className="mt-auto border-t border-border/60">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 px-6 py-6 text-xs text-muted-foreground sm:grid sm:grid-cols-3 sm:items-center">
         <span>© {new Date().getFullYear()} GoodRepo</span>
         <span className="sm:text-center">
@@ -30,7 +30,7 @@ export async function Footer() {
             href="https://jtlee.dev"
             target="_blank"
             rel="noreferrer"
-            className="text-foreground hover:underline underline-offset-4"
+            className="text-foreground underline-offset-4 hover:underline"
           >
             Jordan Lee
           </a>
