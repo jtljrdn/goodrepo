@@ -13,6 +13,16 @@ type SpanProcessor = Exclude<
   "auto"
 >
 
+const SPAN_PROCESSOR_KEY = Symbol.for("goodrepo.langfuse.span-processor")
+
+type LangfuseGlobal = typeof globalThis & {
+  [SPAN_PROCESSOR_KEY]?: LangfuseSpanProcessor
+}
+
+function langfuseGlobal(): LangfuseGlobal {
+  return globalThis as LangfuseGlobal
+}
+
 function withGenAiRedaction(processor: LangfuseSpanProcessor): SpanProcessor {
   return {
     onStart(span, context) {
@@ -35,9 +45,10 @@ function withGenAiRedaction(processor: LangfuseSpanProcessor): SpanProcessor {
   }
 }
 
-let spanProcessor: LangfuseSpanProcessor | undefined
-
 export function registerLangfuse() {
+  const shared = langfuseGlobal()
+  if (shared[SPAN_PROCESSOR_KEY]) return
+
   const publicKey = process.env.LANGFUSE_PUBLIC_KEY
   const secretKey = process.env.LANGFUSE_SECRET_KEY
   const baseUrl = process.env.LANGFUSE_BASE_URL
@@ -50,7 +61,7 @@ export function registerLangfuse() {
     return
   }
 
-  spanProcessor = new LangfuseSpanProcessor({
+  const spanProcessor = new LangfuseSpanProcessor({
     publicKey,
     secretKey,
     baseUrl,
@@ -63,6 +74,7 @@ export function registerLangfuse() {
     exportMode: "immediate",
     mask: maskLangfuseData,
   })
+  shared[SPAN_PROCESSOR_KEY] = spanProcessor
 
   registerOTel({
     serviceName: "goodrepo-web",
@@ -73,7 +85,7 @@ export function registerLangfuse() {
 
 export async function flushLangfuse() {
   try {
-    await spanProcessor?.forceFlush()
+    await langfuseGlobal()[SPAN_PROCESSOR_KEY]?.forceFlush()
   } catch (error) {
     console.error("Failed to flush Langfuse traces", error)
   }

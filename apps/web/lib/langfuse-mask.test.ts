@@ -36,9 +36,29 @@ test("masks secrets nested in structured telemetry", () => {
   })
 })
 
+test("masks quoted JSON credential keys and complete quoted values", () => {
+  const input = JSON.stringify({
+    apiKey: "json-secret",
+    nested: { token: "secret value with spaces" },
+    safe: "visible",
+  })
+
+  expect(maskLangfuseData({ data: input })).toBe(
+    JSON.stringify({
+      apiKey: "[REDACTED]",
+      nested: { token: "[REDACTED]" },
+      safe: "visible",
+    })
+  )
+  expect(
+    maskLangfuseData({ data: 'const API_KEY = "secret value with spaces"' })
+  ).toBe("const API_KEY = [REDACTED]")
+})
+
 test("redacts AI SDK OpenTelemetry message and tool attributes", () => {
   const attributes: Record<string, unknown> = {
-    "gen_ai.input.messages": '[{"content":"TOKEN=secret-value"}]',
+    "gen_ai.input.messages":
+      '[{"content":"{\\"token\\":\\"secret value with spaces\\"}"}]',
     "gen_ai.tool.call.result": "PASSWORD=another-secret",
     "gen_ai.request.model": "anthropic/claude-sonnet-5",
   }
@@ -46,7 +66,7 @@ test("redacts AI SDK OpenTelemetry message and tool attributes", () => {
   redactGenAiSpanAttributes(attributes)
 
   expect(attributes).toEqual({
-    "gen_ai.input.messages": '[{"content":"TOKEN=[REDACTED]"}]',
+    "gen_ai.input.messages": '[{"content":"{\\"token\\":\\"[REDACTED]\\"}"}]',
     "gen_ai.tool.call.result": "PASSWORD=[REDACTED]",
     "gen_ai.request.model": "anthropic/claude-sonnet-5",
   })
