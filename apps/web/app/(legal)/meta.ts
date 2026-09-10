@@ -1,2 +1,2 @@
 export const CONTACT = "jordan@jtlee.dev"
-export const UPDATED = "2 September 2026"
+export const UPDATED = "8 September 2026"

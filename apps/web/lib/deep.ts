@@ -7,7 +7,9 @@ import {
   type SignalId,
   type SignalVerdict,
 } from "@workspace/analyzer"
+import { propagateAttributes, startActiveObservation } from "@langfuse/tracing"
 import { cachedByCommit } from "@/lib/cache"
+import { flushLangfuse } from "@/instrumentation-node"
 import { claimDeepScan, type QuotaRefusal } from "@/lib/quota"
 import { resolveSha, scanAtSha } from "@/lib/scan"
 import { scoreRepo, type ScoredCategory } from "@/lib/score"
@@ -62,6 +64,61 @@ async function reason(
 
 const deepAtSha = cachedByCommit("deep", "v4", reason)
 
+async function tracedDeepScan(
+  owner: string,
+  repo: string,
+  sha: string,
+  userId: string
+): Promise<DeepReport> {
+  const repository = `${owner}/${repo}`
+
+  return propagateAttributes(
+    {
+      traceName: "deep-scan",
+      userId,
+      tags: ["deep-scan", "public-repository"],
+      metadata: { repository, commitSha: sha },
+      version: "deep-v4",
+    },
+    () =>
+      startActiveObservation(
+        "run-deep-scan",
+        async (span) => {
+          span.update({ input: { repository, commitSha: sha } })
+          try {
+            const report = await deepAtSha(owner, repo, sha)
+            span.update({
+              output: report.ok
+                ? {
+                    ok: true,
+                    overall: report.overall,
+                    questionsAsked: report.asked.length,
+                    questionsAnswered: report.verdicts.length,
+                  }
+                : {
+                    ok: false,
+                    failure:
+                      report.refused === null
+                        ? report.failure.kind
+                        : "quota-refused",
+                  },
+            })
+            return report
+          } catch (error) {
+            span.update({
+              level: "ERROR",
+              statusMessage:
+                error instanceof Error ? error.message : "Deep scan failed",
+              output: { ok: false },
+            })
+            throw error
+          }
+        },
+        { asType: "agent" }
+      )
+  )
+}
+
 export async function runDeepScan(
   owner: string,
   repo: string,
@@ -75,7 +132,7 @@ export async function runDeepScan(
   if (!claim.allowed) return { ok: false, refused: claim.reason }
 
   try {
-    return await deepAtSha(owner, repo, sha)
+    return await tracedDeepScan(owner, repo, sha, userId)
   } catch (error) {
     console.error(`Deep scan failed for ${owner}/${repo}@${sha}`, error)
     const base = await scanAtSha(owner, repo, sha)
@@ -89,5 +146,7 @@ export async function runDeepScan(
           ? error.message
           : "The deep scan could not finish.",
     }
+  } finally {
+    await flushLangfuse()
   }
 }

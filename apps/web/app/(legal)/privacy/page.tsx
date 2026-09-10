@@ -67,7 +67,10 @@ export default function PrivacyPage() {
       <p>
         A deep scan checks out the repository into a short-lived sandbox and
         asks a language model a fixed set of questions about it. Source code
-        from the repository is sent to that model to be answered. Deep scans run
+        from the repository is sent to that model to be answered and to Langfuse
+        for tracing. The trace includes the repository and commit, your account
+        ID, model inputs and outputs, tool calls, token usage and timing. Common
+        secret formats are redacted before traces leave GoodRepo. Deep scans run
         on public repositories only.
       </p>
       <p>For each deep scan we record one row:</p>
@@ -107,6 +110,10 @@ export default function PrivacyPage() {
           <strong>Anthropic</strong> is the model provider used for deep scans.
           Repository content sent for a deep scan is not used to train models.
         </li>
+        <li>
+          <strong>Langfuse</strong> stores deep-scan traces so failures,
+          latency, token usage and model behavior can be investigated.
+        </li>
       </ul>
       <p>Nothing is sold, rented, or shared with anyone else.</p>
 
@@ -118,6 +125,10 @@ export default function PrivacyPage() {
           your account is deleted.
         </li>
         <li>Cached public reports: until the scanning rules change.</li>
+        <li>
+          Deep-scan traces: according to the retention configured for the
+          Langfuse project.
+        </li>
         <li>Private scan results: not kept at all.</li>
       </ul>
 

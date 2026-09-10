@@ -22,9 +22,9 @@
   },
   "dependencies": {
     "@vercel/sandbox": "^3.2.1",
-    "ai": "^7.0.87",
+    "ai": "^7.0.94",
+    "typescript": "^5",
     "yaml": "^2.9.0",
-    "zod": "^4.5.4",
-    "typescript": "^5"
+    "zod": "^4.5.4"
   }
 }

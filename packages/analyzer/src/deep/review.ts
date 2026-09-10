@@ -121,6 +121,7 @@ export async function deepReview(
   onToolCall: (call: ToolCall) => void = () => {}
 ): Promise<DeepReview> {
   const agent = new ToolLoopAgent({
+    id: "audit-documentation",
     model: MODEL,
     instructions: {
       role: "system",
@@ -135,6 +136,7 @@ export async function deepReview(
         : {},
     providerOptions: { gateway: { caching: "auto" } },
     output: Output.object({ schema }),
+    telemetry: { functionId: "audit-documentation" },
   })
 
   try {

@@ -202,6 +202,7 @@ export async function resolveSignals(
     signals.length * CAPS.deepStepsPerSignal
   )
   const agent = new ToolLoopAgent({
+    id: "resolve-scan-signals",
     model: MODEL,
     instructions: instructions(signals, budget),
     tools: checkoutTools(checkout, onToolCall),
@@ -210,6 +211,7 @@ export async function resolveSignals(
       stepNumber >= budget - CAPS.deepLandingSteps ? { activeTools: [] } : {},
     output: Output.object({ schema: schemaFor(signals) }),
     providerOptions: { gateway: { caching: "auto" } },
+    telemetry: { functionId: "resolve-scan-signals" },
   })
 
   try {
